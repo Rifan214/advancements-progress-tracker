@@ -80,6 +80,9 @@ public class AdvancementTrackerScreen extends Screen {
 	private int headerHeight = 40;
 	private int footerHeight = 32;
 
+	@Nullable
+	private Component hoveredTooltip = null;
+
 	public AdvancementTrackerScreen(@Nullable Screen parentScreen, @Nullable ClientAdvancements clientAdvancements) {
 		super(Component.translatableWithFallback("advancements_progress_tracker.title", "Advancements Progress Tracker"));
 		this.parentScreen = parentScreen;
@@ -90,7 +93,9 @@ public class AdvancementTrackerScreen extends Screen {
 	protected void init() {
 		super.init();
 
-		this.leftPanelWidth = Math.max(180, Math.min(260, (int) (this.width * 0.35)));
+		this.leftPanelWidth = UILayoutHelper.computeLeftPanelWidth(this.width);
+		boolean stackToolbar = UILayoutHelper.shouldStackToolbar(this.leftPanelWidth);
+		this.headerHeight = UILayoutHelper.computeHeaderHeight(stackToolbar);
 
 		// Load advancements from cache
 		if (this.clientAdvancements != null) {
@@ -100,30 +105,48 @@ public class AdvancementTrackerScreen extends Screen {
 			this.allAdvancements = List.of();
 		}
 
-		// Search Box
-		int searchWidth = Math.min(180, leftPanelWidth - 20);
-		this.searchBox = new EditBox(this.font, 10, 10, searchWidth, 18, Component.translatableWithFallback("advancements_progress_tracker.search", "Search..."));
-		this.searchBox.setHint(Component.translatableWithFallback("advancements_progress_tracker.search.hint", "Search..."));
-		this.searchBox.setValue(this.searchQuery);
-		this.searchBox.setResponder(query -> {
-			this.searchQuery = query;
-			this.leftScroll = 0;
-			this.rightScroll = 0;
-			updateFilteredList();
-		});
-		this.addRenderableWidget(this.searchBox);
+		// Search Box & Filter button
+		if (stackToolbar) {
+			int toolbarW = this.leftPanelWidth - 20;
+			this.searchBox = new EditBox(this.font, 10, 8, toolbarW, 18, Component.translatableWithFallback("advancements_progress_tracker.search", "Search..."));
+			this.searchBox.setHint(Component.translatableWithFallback("advancements_progress_tracker.search.hint", "Search..."));
+			this.searchBox.setValue(this.searchQuery);
+			this.searchBox.setResponder(query -> {
+				this.searchQuery = query;
+				this.leftScroll = 0;
+				this.rightScroll = 0;
+				updateFilteredList();
+			});
+			this.addRenderableWidget(this.searchBox);
 
-		// Filter button
-		int filterX = 15 + searchWidth;
-		int filterWidth = Math.min(110, Math.max(70, leftPanelWidth - searchWidth - 20));
-		this.filterButton = Button.builder(this.filterMode.getLabel(), btn -> {
-			cycleFilterMode();
-			btn.setMessage(this.filterMode.getLabel());
-		}).bounds(filterX, 10, filterWidth, 18).build();
-		this.addRenderableWidget(this.filterButton);
+			this.filterButton = Button.builder(this.filterMode.getLabel(), btn -> {
+				cycleFilterMode();
+				btn.setMessage(this.filterMode.getLabel());
+			}).bounds(10, 30, toolbarW, 18).build();
+			this.addRenderableWidget(this.filterButton);
+		} else {
+			int filterWidth = 85;
+			int searchWidth = this.leftPanelWidth - filterWidth - 25;
+			this.searchBox = new EditBox(this.font, 10, 10, searchWidth, 18, Component.translatableWithFallback("advancements_progress_tracker.search", "Search..."));
+			this.searchBox.setHint(Component.translatableWithFallback("advancements_progress_tracker.search.hint", "Search..."));
+			this.searchBox.setValue(this.searchQuery);
+			this.searchBox.setResponder(query -> {
+				this.searchQuery = query;
+				this.leftScroll = 0;
+				this.rightScroll = 0;
+				updateFilteredList();
+			});
+			this.addRenderableWidget(this.searchBox);
+
+			this.filterButton = Button.builder(this.filterMode.getLabel(), btn -> {
+				cycleFilterMode();
+				btn.setMessage(this.filterMode.getLabel());
+			}).bounds(15 + searchWidth, 10, filterWidth, 18).build();
+			this.addRenderableWidget(this.filterButton);
+		}
 
 		// Done/Close Button
-		int doneWidth = 100;
+		int doneWidth = Math.min(100, Math.max(70, this.width - leftPanelWidth - 20));
 		this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, btn -> this.onClose())
 			.bounds(this.width - doneWidth - 10, this.height - 26, doneWidth, 20)
 			.build());
@@ -349,6 +372,8 @@ public class AdvancementTrackerScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+		this.hoveredTooltip = null;
+
 		// 1. Render Screen Background
 		graphics.fill(0, 0, this.width, this.height, 0xEE121214);
 
@@ -373,6 +398,11 @@ public class AdvancementTrackerScreen extends Screen {
 
 		// 7. Render Widgets (Search bar, Buttons)
 		super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+
+		// 8. Tooltip for truncated text (if hovered)
+		if (this.hoveredTooltip != null) {
+			graphics.setTooltipForNextFrame(this.font, this.hoveredTooltip, mouseX, mouseY);
+		}
 	}
 
 	private void renderLeftPanel(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -380,6 +410,7 @@ public class AdvancementTrackerScreen extends Screen {
 		int totalContentHeight = filteredAdvancements.size() * itemHeight;
 		int visibleHeight = this.height - headerHeight - footerHeight;
 		this.maxLeftScroll = Math.max(0, totalContentHeight - visibleHeight);
+		this.leftScroll = Math.max(0, Math.min(this.leftScroll, this.maxLeftScroll));
 
 		int startY = headerHeight - (int) leftScroll;
 
@@ -408,9 +439,16 @@ public class AdvancementTrackerScreen extends Screen {
 			// Title
 			int titleColor = getAdvancementTitleColor(info.type());
 			String titleStr = info.title().getString();
-			int maxTitleWidth = leftPanelWidth - 75;
-			String trimmedTitle = trimStringToWidth(this.font, titleStr, maxTitleWidth);
-			graphics.text(this.font, trimmedTitle, 36, itemY + 6, titleColor, true);
+			int maxTitleWidth = Math.max(20, leftPanelWidth - 48);
+			if (this.font.width(titleStr) > maxTitleWidth) {
+				String trimmedTitle = trimStringToWidth(this.font, titleStr, maxTitleWidth);
+				graphics.text(this.font, trimmedTitle, 36, itemY + 6, titleColor, true);
+				if (isHovered) {
+					this.hoveredTooltip = info.title();
+				}
+			} else {
+				graphics.text(this.font, titleStr, 36, itemY + 6, titleColor, true);
+			}
 
 			// Progress text
 			String progressStr = info.getProgressFormatted();
@@ -418,8 +456,8 @@ public class AdvancementTrackerScreen extends Screen {
 			graphics.text(this.font, progressStr, 36, itemY + 18, progressColor, false);
 
 			// Mini Progress Bar
-			int barX = leftPanelWidth - 45;
-			int barWidth = 32;
+			int barWidth = Math.max(16, Math.min(32, leftPanelWidth - 110));
+			int barX = leftPanelWidth - barWidth - 14;
 			int barY = itemY + 22;
 			graphics.fill(barX, barY, barX + barWidth, barY + 3, 0xFF222222);
 			int fillWidth = Math.round(barWidth * info.percent());
@@ -447,8 +485,13 @@ public class AdvancementTrackerScreen extends Screen {
 		AdvancementProgressInfo info = selectedAdvancement;
 		int currentY = headerHeight + 12 - (int) rightScroll;
 
-		// 1. Header Card Background
-		int cardHeight = 68;
+		// 1. Header Card (Dynamic height, wrapped title & description, internal ID removed)
+		int availableTextW = UILayoutHelper.computeAvailableDetailTextWidth(rightWidth);
+		List<FormattedCharSequence> titleLines = this.font.split(info.title(), availableTextW);
+		List<FormattedCharSequence> descLines = this.font.split(info.description(), availableTextW);
+
+		int cardHeight = UILayoutHelper.calculateHeaderCardHeight(titleLines.size(), descLines.size());
+
 		graphics.fill(rightX, currentY, rightX + rightWidth, currentY + cardHeight, 0x22FFFFFF);
 		graphics.fill(rightX, currentY, rightX + 3, currentY + cardHeight, getAdvancementTitleColor(info.type()));
 
@@ -456,59 +499,94 @@ public class AdvancementTrackerScreen extends Screen {
 		ItemStack icon = getAdvancementIcon(info);
 		graphics.item(icon, rightX + 10, currentY + 10);
 
-		// Title & ID
-		graphics.text(this.font, info.title(), rightX + 32, currentY + 10, getAdvancementTitleColor(info.type()), true);
-		graphics.text(this.font, info.id().toString(), rightX + 32, currentY + 22, 0xFF666677, false);
+		// Render Title lines (wrapped)
+		int textY = currentY + 10;
+		for (FormattedCharSequence tLine : titleLines) {
+			graphics.text(this.font, tLine, rightX + 34, textY, getAdvancementTitleColor(info.type()), true);
+			textY += 11;
+		}
 
-		// Description
-		List<FormattedCharSequence> descLines = this.font.split(info.description(), rightWidth - 42);
-		int descY = currentY + 34;
-		for (int i = 0; i < Math.min(2, descLines.size()); i++) {
-			graphics.text(this.font, descLines.get(i), rightX + 32, descY + (i * 10), 0xFFAAAAAA, false);
+		// Render Description lines (wrapped)
+		textY += 2;
+		for (FormattedCharSequence dLine : descLines) {
+			graphics.text(this.font, dLine, rightX + 34, textY, 0xFFAAAAAA, false);
+			textY += 10;
 		}
 
 		currentY += cardHeight + 10;
 
-		// 2. Main Progress Bar Card
-		int barCardHeight = 46;
-		graphics.fill(rightX, currentY, rightX + rightWidth, currentY + barCardHeight, 0x19FFFFFF);
+		// 2. Main Progress Bar Card (Responsive single-line or stacked layout)
+		int pBarY;
+		int barCardHeight;
 
 		if (info.isOrRequirement()) {
 			Component reqTitle = Component.translatableWithFallback("advancements_progress_tracker.requirements", "Requirements");
 			String reqProgress = info.getProgressFormatted() + " (" + info.getPercentInt() + "%)";
-			graphics.text(this.font, reqTitle, rightX + 8, currentY + 6, 0xFFFFFFFF, true);
-			graphics.text(this.font, reqProgress, rightX + 8 + this.font.width(reqTitle) + 6, currentY + 6, info.isCompleted() ? 0xFF2ECC71 : 0xFFFFAA00, true);
-
 			Component orNote = Component.translatable(
 				"advancements_progress_tracker.criteria_fulfilled",
 				info.completedCriteriaCount(),
 				info.totalCriteria()
 			);
+
+			int leftW = this.font.width(reqTitle) + 6 + this.font.width(reqProgress);
 			int noteW = this.font.width(orNote);
-			graphics.text(this.font, orNote, rightX + rightWidth - noteW - 8, currentY + 6, 0xFFAAAAAA, false);
+			boolean fitsSingleLine = UILayoutHelper.fitsSingleLineProgress(leftW, noteW, rightWidth);
+			barCardHeight = UILayoutHelper.calculateProgressCardHeight(fitsSingleLine);
+
+			if (fitsSingleLine) {
+				graphics.fill(rightX, currentY, rightX + rightWidth, currentY + barCardHeight, 0x19FFFFFF);
+
+				graphics.text(this.font, reqTitle, rightX + 8, currentY + 6, 0xFFFFFFFF, true);
+				graphics.text(this.font, reqProgress, rightX + 8 + this.font.width(reqTitle) + 6, currentY + 6, info.isCompleted() ? 0xFF2ECC71 : 0xFFFFAA00, true);
+				graphics.text(this.font, orNote, rightX + rightWidth - noteW - 8, currentY + 6, 0xFFAAAAAA, false);
+				pBarY = currentY + 22;
+			} else {
+				graphics.fill(rightX, currentY, rightX + rightWidth, currentY + barCardHeight, 0x19FFFFFF);
+
+				graphics.text(this.font, reqTitle, rightX + 8, currentY + 6, 0xFFFFFFFF, true);
+				graphics.text(this.font, reqProgress, rightX + 8 + this.font.width(reqTitle) + 6, currentY + 6, info.isCompleted() ? 0xFF2ECC71 : 0xFFFFAA00, true);
+				graphics.text(this.font, orNote, rightX + 8, currentY + 18, 0xFFAAAAAA, false);
+				pBarY = currentY + 34;
+			}
 		} else {
 			Component progressTitle = Component.translatableWithFallback("advancements_progress_tracker.progress", "Progress");
 			String progressSummary = info.getProgressFormatted() + " (" + info.getPercentInt() + "%)";
-			graphics.text(this.font, progressTitle, rightX + 8, currentY + 6, 0xFFFFFFFF, true);
-			int summaryWidth = this.font.width(progressSummary);
-			graphics.text(this.font, progressSummary, rightX + rightWidth - summaryWidth - 8, currentY + 6, info.isCompleted() ? 0xFF2ECC71 : 0xFFFFAA00, true);
+
+			int titleW = this.font.width(progressTitle);
+			int summaryW = this.font.width(progressSummary);
+			boolean fitsSingleLine = UILayoutHelper.fitsSingleLineProgress(titleW, summaryW, rightWidth);
+			barCardHeight = UILayoutHelper.calculateProgressCardHeight(fitsSingleLine);
+
+			if (fitsSingleLine) {
+				graphics.fill(rightX, currentY, rightX + rightWidth, currentY + barCardHeight, 0x19FFFFFF);
+
+				graphics.text(this.font, progressTitle, rightX + 8, currentY + 6, 0xFFFFFFFF, true);
+				graphics.text(this.font, progressSummary, rightX + rightWidth - summaryW - 8, currentY + 6, info.isCompleted() ? 0xFF2ECC71 : 0xFFFFAA00, true);
+				pBarY = currentY + 22;
+			} else {
+				barCardHeight = 56;
+				graphics.fill(rightX, currentY, rightX + rightWidth, currentY + barCardHeight, 0x19FFFFFF);
+
+				graphics.text(this.font, progressTitle, rightX + 8, currentY + 6, 0xFFFFFFFF, true);
+				graphics.text(this.font, progressSummary, rightX + 8, currentY + 18, info.isCompleted() ? 0xFF2ECC71 : 0xFFFFAA00, true);
+				pBarY = currentY + 34;
+			}
 		}
 
-		// Large bar
+		// Large Progress Bar
 		int pBarX = rightX + 8;
-		int pBarY = currentY + 22;
-		int pBarW = rightWidth - 16;
+		int pBarW = Math.max(10, rightWidth - 16);
 		int pBarH = 14;
 		graphics.fill(pBarX, pBarY, pBarX + pBarW, pBarY + pBarH, 0xFF111115);
 		int filledW = Math.round(pBarW * info.percent());
 		if (filledW > 0) {
 			int barColor = info.isCompleted() ? 0xFF2ECC71 : 0xFF3498DB;
-			graphics.fill(pBarX, pBarY, pBarX + filledW, pBarY + pBarH, barColor);
+			graphics.fill(pBarX, pBarY, pBarX + Math.min(filledW, pBarW), pBarY + pBarH, barColor);
 		}
 
 		currentY += barCardHeight + 12;
 
-		// 3. Criteria Sections (The MAIN content!)
+		// 3. Criteria Sections
 		List<CriterionDetail> completed = info.completedCriteria();
 		List<CriterionDetail> remaining = info.remainingCriteria();
 
@@ -517,8 +595,11 @@ public class AdvancementTrackerScreen extends Screen {
 		// Completed Section Header
 		graphics.fill(rightX, currentY, rightX + rightWidth, currentY + 22, 0x222ECC71);
 		graphics.fill(rightX, currentY, rightX + 3, currentY + 22, 0xFF2ECC71);
-		String completedHeader = "✓ " + Component.translatableWithFallback("advancements_progress_tracker.completed", "Completed").getString() + " (" + completed.size() + ")";
-		graphics.text(this.font, completedHeader, rightX + 10, currentY + 7, 0xFF2ECC71, true);
+		String completedLabel = Component.translatableWithFallback("advancements_progress_tracker.completed", "Completed").getString();
+		String completedHeader = "✓ " + completedLabel + " (" + completed.size() + ")";
+		int maxHeaderW = Math.max(20, rightWidth - 16);
+		String trimmedCompHeader = trimStringToWidth(this.font, completedHeader, maxHeaderW);
+		graphics.text(this.font, trimmedCompHeader, rightX + 10, currentY + 7, 0xFF2ECC71, true);
 		graphics.fill(rightX, currentY + 22, rightX + rightWidth, currentY + 23, 0x332ECC71);
 		currentY += 26;
 
@@ -533,11 +614,22 @@ public class AdvancementTrackerScreen extends Screen {
 					graphics.fill(rightX + 4, currentY, rightX + rightWidth - 4, currentY + rowHeight - 2, rowBg);
 					graphics.text(this.font, "✓", rightX + 8, currentY + 6, 0xFF2ECC71, false);
 
+					int textStartX = cd.icon().isEmpty() ? rightX + 22 : rightX + 42;
+					int maxTextW = Math.max(20, rightX + rightWidth - textStartX - 10);
+					String dispName = cd.displayName().getString();
+
 					if (!cd.icon().isEmpty()) {
 						graphics.item(cd.icon(), rightX + 22, currentY + 2);
-						graphics.text(this.font, cd.displayName(), rightX + 42, currentY + 6, 0xFFE0E0E0, false);
+					}
+
+					if (this.font.width(dispName) > maxTextW) {
+						String trimmed = trimStringToWidth(this.font, dispName, maxTextW);
+						graphics.text(this.font, trimmed, textStartX, currentY + 6, 0xFFE0E0E0, false);
+						if (isHovered) {
+							this.hoveredTooltip = cd.displayName();
+						}
 					} else {
-						graphics.text(this.font, cd.displayName(), rightX + 22, currentY + 6, 0xFFE0E0E0, false);
+						graphics.text(this.font, cd.displayName(), textStartX, currentY + 6, 0xFFE0E0E0, false);
 					}
 				}
 				currentY += rowHeight;
@@ -549,8 +641,10 @@ public class AdvancementTrackerScreen extends Screen {
 		// Remaining Section Header
 		graphics.fill(rightX, currentY, rightX + rightWidth, currentY + 22, 0x22F39C12);
 		graphics.fill(rightX, currentY, rightX + 3, currentY + 22, 0xFFF39C12);
-		String remainingHeader = "○ " + Component.translatableWithFallback("advancements_progress_tracker.remaining", "Remaining").getString() + " (" + remaining.size() + ")";
-		graphics.text(this.font, remainingHeader, rightX + 10, currentY + 7, 0xFFF39C12, true);
+		String remainingLabel = Component.translatableWithFallback("advancements_progress_tracker.remaining", "Remaining").getString();
+		String remainingHeader = "○ " + remainingLabel + " (" + remaining.size() + ")";
+		String trimmedRemHeader = trimStringToWidth(this.font, remainingHeader, maxHeaderW);
+		graphics.text(this.font, trimmedRemHeader, rightX + 10, currentY + 7, 0xFFF39C12, true);
 		graphics.fill(rightX, currentY + 22, rightX + rightWidth, currentY + 23, 0x33F39C12);
 		currentY += 26;
 
@@ -565,11 +659,22 @@ public class AdvancementTrackerScreen extends Screen {
 					graphics.fill(rightX + 4, currentY, rightX + rightWidth - 4, currentY + rowHeight - 2, rowBg);
 					graphics.text(this.font, "○", rightX + 8, currentY + 6, 0xFF888888, false);
 
+					int textStartX = cd.icon().isEmpty() ? rightX + 22 : rightX + 42;
+					int maxTextW = Math.max(20, rightX + rightWidth - textStartX - 10);
+					String dispName = cd.displayName().getString();
+
 					if (!cd.icon().isEmpty()) {
 						graphics.item(cd.icon(), rightX + 22, currentY + 2);
-						graphics.text(this.font, cd.displayName(), rightX + 42, currentY + 6, 0xFFAAAAAA, false);
+					}
+
+					if (this.font.width(dispName) > maxTextW) {
+						String trimmed = trimStringToWidth(this.font, dispName, maxTextW);
+						graphics.text(this.font, trimmed, textStartX, currentY + 6, 0xFFAAAAAA, false);
+						if (isHovered) {
+							this.hoveredTooltip = cd.displayName();
+						}
 					} else {
-						graphics.text(this.font, cd.displayName(), rightX + 22, currentY + 6, 0xFFAAAAAA, false);
+						graphics.text(this.font, cd.displayName(), textStartX, currentY + 6, 0xFFAAAAAA, false);
 					}
 				}
 				currentY += rowHeight;
@@ -579,6 +684,7 @@ public class AdvancementTrackerScreen extends Screen {
 		int totalContentH = currentY + (int) rightScroll - headerHeight;
 		this.lastRightContentHeight = totalContentH;
 		this.maxRightScroll = Math.max(0, totalContentH - visibleHeight + 20);
+		this.rightScroll = Math.max(0, Math.min(this.rightScroll, this.maxRightScroll));
 
 		if (maxRightScroll > 0) {
 			renderScrollbar(graphics, this.width - 8, headerHeight, visibleHeight, rightScroll, maxRightScroll, totalContentH, isDraggingRightScroll, mouseX, mouseY);
@@ -632,18 +738,6 @@ public class AdvancementTrackerScreen extends Screen {
 	}
 
 	private static String trimStringToWidth(Font font, String str, int maxWidth) {
-		if (font.width(str) <= maxWidth) {
-			return str;
-		}
-		String dots = "...";
-		int dotsWidth = font.width(dots);
-		StringBuilder sb = new StringBuilder();
-		for (char c : str.toCharArray()) {
-			if (font.width(sb.toString() + c) + dotsWidth > maxWidth) {
-				break;
-			}
-			sb.append(c);
-		}
-		return sb.toString() + dots;
+		return UILayoutHelper.trimStringToWidth(font::width, str, maxWidth);
 	}
 }
