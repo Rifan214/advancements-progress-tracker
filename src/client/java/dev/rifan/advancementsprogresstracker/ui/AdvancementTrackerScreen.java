@@ -31,6 +31,7 @@ public class AdvancementTrackerScreen extends Screen {
 		ALL("advancements_progress_tracker.filter.all", "All"),
 		IN_PROGRESS("advancements_progress_tracker.filter.in_progress", "In Progress"),
 		COMPLETED("advancements_progress_tracker.filter.completed", "Completed"),
+		NOT_STARTED("advancements_progress_tracker.filter.not_started", "Not Started"),
 		MULTI_ONLY("advancements_progress_tracker.filter.multi_only", "Multi-Criteria");
 
 		private final String translationKey;
@@ -55,6 +56,7 @@ public class AdvancementTrackerScreen extends Screen {
 	private Button filterButton;
 	private FilterMode filterMode = FilterMode.ALL;
 	private String searchQuery = "";
+	private long lastCacheVersion = -1;
 
 	private List<AdvancementProgressInfo> allAdvancements = new ArrayList<>();
 	private List<AdvancementProgressInfo> filteredAdvancements = new ArrayList<>();
@@ -86,6 +88,7 @@ public class AdvancementTrackerScreen extends Screen {
 
 		// Load advancements from cache
 		if (this.clientAdvancements != null) {
+			this.lastCacheVersion = AdvancementProgressCache.getInstance().getVersion();
 			this.allAdvancements = AdvancementProgressCache.getInstance().getAll(this.clientAdvancements);
 		} else {
 			this.allAdvancements = List.of();
@@ -126,6 +129,35 @@ public class AdvancementTrackerScreen extends Screen {
 		}
 	}
 
+	@Override
+	public void tick() {
+		super.tick();
+		if (this.clientAdvancements != null) {
+			long currentVersion = AdvancementProgressCache.getInstance().getVersion();
+			if (this.lastCacheVersion != -1 && currentVersion != this.lastCacheVersion) {
+				this.lastCacheVersion = currentVersion;
+				refreshData();
+			}
+		}
+	}
+
+	private void refreshData() {
+		if (this.clientAdvancements != null) {
+			Identifier selectedId = selectedAdvancement != null ? selectedAdvancement.id() : null;
+			this.allAdvancements = AdvancementProgressCache.getInstance().getAll(this.clientAdvancements);
+			updateFilteredList();
+
+			if (selectedId != null) {
+				for (AdvancementProgressInfo info : this.filteredAdvancements) {
+					if (info.id().equals(selectedId)) {
+						this.selectedAdvancement = info;
+						break;
+					}
+				}
+			}
+		}
+	}
+
 	private void cycleFilterMode() {
 		FilterMode[] modes = FilterMode.values();
 		int nextIndex = (filterMode.ordinal() + 1) % modes.length;
@@ -145,6 +177,9 @@ public class AdvancementTrackerScreen extends Screen {
 				continue;
 			}
 			if (filterMode == FilterMode.COMPLETED && info.status() != ProgressStatus.COMPLETED) {
+				continue;
+			}
+			if (filterMode == FilterMode.NOT_STARTED && info.status() != ProgressStatus.NOT_STARTED) {
 				continue;
 			}
 			if (filterMode == FilterMode.MULTI_ONLY && !info.isMultiCriteria()) {

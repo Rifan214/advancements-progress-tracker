@@ -7,6 +7,7 @@
 	"advancements_progress_tracker.filter.all": "Semua",
 	"advancements_progress_tracker.filter.in_progress": "Berjalan",
 	"advancements_progress_tracker.filter.completed": "Selesai",
+	"advancements_progress_tracker.filter.not_started": "Belum Dimulai",
 	"advancements_progress_tracker.filter.multi_only": "Multi-Kriteria",
 	"advancements_progress_tracker.progress": "Kemajuan",
 	"advancements_progress_tracker.completed": "Sudah Selesai",

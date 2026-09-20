@@ -7,6 +7,7 @@
 	"advancements_progress_tracker.filter.all": "All",
 	"advancements_progress_tracker.filter.in_progress": "In Progress",
 	"advancements_progress_tracker.filter.completed": "Completed",
+	"advancements_progress_tracker.filter.not_started": "Not Started",
 	"advancements_progress_tracker.filter.multi_only": "Multi-Criteria",
 	"advancements_progress_tracker.progress": "Progress",
 	"advancements_progress_tracker.completed": "Completed",

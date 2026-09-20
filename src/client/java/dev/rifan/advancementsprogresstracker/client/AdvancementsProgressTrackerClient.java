@@ -1,5 +1,6 @@
 package dev.rifan.advancementsprogresstracker.client;
 
+import dev.rifan.advancementsprogresstracker.cache.AdvancementProgressCache;
 import dev.rifan.advancementsprogresstracker.ui.AdvancementTrackerScreen;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -34,7 +35,11 @@ public class AdvancementsProgressTrackerClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (OPEN_TRACKER_KEY.consumeClick()) {
 				if (client.player != null && client.getConnection() != null) {
-					client.setScreenAndShow(new AdvancementTrackerScreen(client.gui.screen(), client.getConnection().getAdvancements()));
+					if (client.gui.screen() instanceof AdvancementTrackerScreen trackerScreen) {
+						trackerScreen.onClose();
+					} else {
+						client.setScreenAndShow(new AdvancementTrackerScreen(client.gui.screen(), client.getConnection().getAdvancements()));
+					}
 				}
 			}
 		});
@@ -58,6 +63,11 @@ public class AdvancementsProgressTrackerClient implements ClientModInitializer {
 					).bounds(buttonX, buttonY, buttonWidth, buttonHeight).build()
 				);
 			}
+		});
+
+		// 4. Clear cache on disconnect/world change
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			AdvancementProgressCache.getInstance().clear();
 		});
 
 		LOGGER.info("[Advancements Progress Tracker] Client initialized successfully");

@@ -27,6 +27,7 @@ public class AdvancementProgressCache {
 	private final Map<Identifier, AdvancementProgressInfo> cacheById = new HashMap<>();
 	private List<AdvancementProgressInfo> cachedList = Collections.emptyList();
 	private volatile boolean dirty = true;
+	private long version = 0;
 
 	private AdvancementProgressCache() {
 	}
@@ -40,6 +41,7 @@ public class AdvancementProgressCache {
 	 */
 	public synchronized void invalidate() {
 		this.dirty = true;
+		this.version++;
 	}
 
 	/**
@@ -49,6 +51,15 @@ public class AdvancementProgressCache {
 		this.cacheById.clear();
 		this.cachedList = Collections.emptyList();
 		this.dirty = true;
+		this.version++;
+	}
+
+	/**
+	 * Returns the current version counter of the cache.
+	 * Increments whenever progress updates or cache is invalidated.
+	 */
+	public synchronized long getVersion() {
+		return this.version;
 	}
 
 	/**
