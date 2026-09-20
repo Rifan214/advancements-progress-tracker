@@ -17,5 +17,6 @@
 	"advancements_progress_tracker.select_prompt": "Pilih advancement dari daftar untuk melihat detail kemajuan kriteria.",
 	"advancements_progress_tracker.status.not_started": "Belum Dimulai",
 	"advancements_progress_tracker.status.in_progress": "Sedang Berjalan",
-	"advancements_progress_tracker.status.completed": "Selesai"
+	"advancements_progress_tracker.status.completed": "Selesai",
+	"advancements_progress_tracker.or_requirement": "Membutuhkan %d dari %d kriteria"
 }

@@ -15,7 +15,7 @@ public class BiomeCriterionResolver implements CriterionResolver {
 
 	@Override
 	public boolean canResolve(String criterionId, String advancementId) {
-		if (advancementId.contains("adventuring_time")) {
+		if (advancementId.contains("adventuring_time") || advancementId.contains("explore_nether")) {
 			return true;
 		}
 		Identifier id = Identifier.tryParse(criterionId);
@@ -27,10 +27,26 @@ public class BiomeCriterionResolver implements CriterionResolver {
 		Identifier id = Identifier.tryParse(criterionId);
 		Component displayName;
 		if (id != null) {
-			displayName = Component.translatable("biome." + id.getNamespace() + "." + id.getPath());
+			displayName = Component.translatableWithFallback(
+				"biome." + id.getNamespace() + "." + id.getPath(),
+				formatFallback(id.getPath())
+			);
 		} else {
-			displayName = Component.literal(criterionId);
+			displayName = Component.literal(formatFallback(criterionId));
 		}
 		return new CriterionDetail(criterionId, displayName, completed, obtainedTime, "biome");
+	}
+
+	private String formatFallback(String path) {
+		String[] parts = path.replace('_', ' ').split("\\s+");
+		StringBuilder sb = new StringBuilder();
+		for (String part : parts) {
+			if (!part.isEmpty()) {
+				sb.append(Character.toUpperCase(part.charAt(0)))
+				  .append(part.substring(1).toLowerCase())
+				  .append(" ");
+			}
+		}
+		return sb.toString().trim();
 	}
 }

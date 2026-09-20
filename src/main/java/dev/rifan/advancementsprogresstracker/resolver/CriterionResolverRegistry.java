@@ -16,6 +16,8 @@ public class CriterionResolverRegistry {
 
 	private CriterionResolverRegistry() {
 		register(new BiomeCriterionResolver());
+		register(new TrimPatternCriterionResolver());
+		register(new VariantCriterionResolver());
 		register(new EntityCriterionResolver());
 		register(new ItemCriterionResolver());
 		register(fallbackResolver);

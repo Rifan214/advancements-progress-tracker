@@ -15,8 +15,16 @@ public class EntityCriterionResolver implements CriterionResolver {
 
 	@Override
 	public boolean canResolve(String criterionId, String advancementId) {
-		if (advancementId.contains("kill_all_mobs") || advancementId.contains("bred_all_animals") || advancementId.contains("tame_all_animals")) {
+		if (advancementId.contains("kill_all_mobs") || advancementId.contains("kill_a_mob")
+			|| advancementId.contains("bred_all_animals") || advancementId.contains("tame_all_animals")) {
 			return true;
+		}
+		Identifier id = Identifier.tryParse(criterionId);
+		if (id != null) {
+			try {
+				return net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(id);
+			} catch (Throwable ignored) {
+			}
 		}
 		return false;
 	}
@@ -26,10 +34,26 @@ public class EntityCriterionResolver implements CriterionResolver {
 		Identifier id = Identifier.tryParse(criterionId);
 		Component displayName;
 		if (id != null) {
-			displayName = Component.translatable("entity." + id.getNamespace() + "." + id.getPath());
+			displayName = Component.translatableWithFallback(
+				"entity." + id.getNamespace() + "." + id.getPath(),
+				formatFallback(id.getPath())
+			);
 		} else {
-			displayName = Component.literal(criterionId);
+			displayName = Component.literal(formatFallback(criterionId));
 		}
 		return new CriterionDetail(criterionId, displayName, completed, obtainedTime, "entity");
+	}
+
+	private String formatFallback(String path) {
+		String[] parts = path.replace('_', ' ').split("\\s+");
+		StringBuilder sb = new StringBuilder();
+		for (String part : parts) {
+			if (!part.isEmpty()) {
+				sb.append(Character.toUpperCase(part.charAt(0)))
+				  .append(part.substring(1).toLowerCase())
+				  .append(" ");
+			}
+		}
+		return sb.toString().trim();
 	}
 }

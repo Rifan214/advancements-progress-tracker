@@ -17,5 +17,6 @@
 	"advancements_progress_tracker.select_prompt": "Select an advancement from the list to view detailed progress.",
 	"advancements_progress_tracker.status.not_started": "Not Started",
 	"advancements_progress_tracker.status.in_progress": "In Progress",
-	"advancements_progress_tracker.status.completed": "Completed"
+	"advancements_progress_tracker.status.completed": "Completed",
+	"advancements_progress_tracker.or_requirement": "Requires %d of %d criteria"
 }

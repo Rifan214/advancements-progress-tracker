@@ -395,7 +395,18 @@ public class AdvancementTrackerScreen extends Screen {
 
 		// Progress label
 		String progressSummary = info.getProgressFormatted() + " (" + info.getPercentInt() + "%)";
-		graphics.text(this.font, Component.translatableWithFallback("advancements_progress_tracker.progress", "Progress"), rightX + 8, currentY + 6, 0xFFFFFFFF, true);
+		Component progressTitle = Component.translatableWithFallback("advancements_progress_tracker.progress", "Progress");
+		graphics.text(this.font, progressTitle, rightX + 8, currentY + 6, 0xFFFFFFFF, true);
+
+		if (info.isOrRequirement()) {
+			Component orNote = Component.translatable(
+				"advancements_progress_tracker.or_requirement",
+				info.totalRequirements(),
+				info.totalCriteria()
+			);
+			graphics.text(this.font, orNote, rightX + 16 + this.font.width(progressTitle), currentY + 6, 0xFFAAAAAA, false);
+		}
+
 		int summaryWidth = this.font.width(progressSummary);
 		graphics.text(this.font, progressSummary, rightX + rightWidth - summaryWidth - 8, currentY + 6, info.isCompleted() ? 0xFF2ECC71 : 0xFFFFAA00, true);
 

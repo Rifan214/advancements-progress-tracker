@@ -69,8 +69,35 @@ public record AdvancementProgressInfo(
 		return status == ProgressStatus.COMPLETED;
 	}
 
-	public boolean isMultiCriteria() {
+	/**
+	 * Returns true if this advancement has multiple requirement groups
+	 * (e.g. Adventuring Time with 55 biomes, Monsters Hunted with 41 mobs).
+	 */
+	public boolean isMultiRequirement() {
 		return totalRequirements > 1;
+	}
+
+	/**
+	 * Returns true if this advancement has multiple individual criteria
+	 * (including both AND-advancements like Adventuring Time and OR-advancements like Monster Hunter).
+	 */
+	public boolean isMultiCriteria() {
+		return totalRequirements > 1 || criteria.size() > 1;
+	}
+
+	/**
+	 * Returns true if this is an OR / mixed requirement advancement (criteria count > requirements count).
+	 */
+	public boolean isOrRequirement() {
+		return criteria.size() > totalRequirements;
+	}
+
+	public int totalCriteria() {
+		return criteria.size();
+	}
+
+	public int completedCriteriaCount() {
+		return completedCriteria.size();
 	}
 
 	public String getProgressFormatted() {

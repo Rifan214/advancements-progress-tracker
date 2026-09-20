@@ -47,27 +47,37 @@ public class AdvancementProgressReader {
 		}
 
 		int completed;
-		if (progress != null && progress.isDone()) {
-			completed = total;
-		} else if (progress != null && progress.hasProgress()) {
-			completed = requirements.count(criterionName -> {
-				CriterionProgress cp = progress.getCriterion(criterionName);
-				return cp != null && cp.isDone();
-			});
+		float percent;
+		if (progress != null) {
+			if (progress.isDone()) {
+				completed = total;
+				percent = 1.0f;
+			} else if (progress.hasProgress()) {
+				completed = requirements.count(criterionName -> {
+					CriterionProgress cp = progress.getCriterion(criterionName);
+					return cp != null && cp.isDone();
+				});
+				percent = progress.getPercent();
+			} else {
+				completed = 0;
+				percent = 0.0f;
+			}
 		} else {
 			completed = 0;
+			percent = 0.0f;
 		}
 
 		int remaining = Math.max(0, total - completed);
-		float percent = total > 0 ? (float) completed / (float) total : (completed > 0 ? 1.0f : 0.0f);
 		if (percent > 1.0f) {
 			percent = 1.0f;
+		} else if (percent < 0.0f) {
+			percent = 0.0f;
 		}
 
 		ProgressStatus status;
-		if (completed >= total || (progress != null && progress.isDone())) {
+		if ((progress != null && progress.isDone()) || completed >= total) {
 			status = ProgressStatus.COMPLETED;
-		} else if (completed > 0 || (progress != null && progress.hasProgress())) {
+		} else if ((progress != null && progress.hasProgress()) || completed > 0) {
 			status = ProgressStatus.IN_PROGRESS;
 		} else {
 			status = ProgressStatus.NOT_STARTED;
