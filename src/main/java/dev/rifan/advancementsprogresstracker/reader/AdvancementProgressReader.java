@@ -89,7 +89,21 @@ public class AdvancementProgressReader {
 		List<CriterionDetail> completedList = new ArrayList<>();
 		List<CriterionDetail> remainingList = new ArrayList<>();
 
-		for (String criterionId : criteriaMap.keySet()) {
+		// Collect all criterion IDs from requirements, criteriaMap, and progress
+		java.util.Set<String> allCriterionIds = new java.util.LinkedHashSet<>(requirements.names());
+		if (!criteriaMap.isEmpty()) {
+			allCriterionIds.addAll(criteriaMap.keySet());
+		}
+		if (progress != null) {
+			for (String completedId : progress.getCompletedCriteria()) {
+				allCriterionIds.add(completedId);
+			}
+			for (String remainingId : progress.getRemainingCriteria()) {
+				allCriterionIds.add(remainingId);
+			}
+		}
+
+		for (String criterionId : allCriterionIds) {
 			CriterionProgress cp = progress != null ? progress.getCriterion(criterionId) : null;
 			boolean isDone = cp != null && cp.isDone();
 			Instant obtained = cp != null ? cp.getObtained() : null;
