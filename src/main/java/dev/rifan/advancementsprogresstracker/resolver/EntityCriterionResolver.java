@@ -31,17 +31,29 @@ public class EntityCriterionResolver implements CriterionResolver {
 
 	@Override
 	public CriterionDetail resolve(String criterionId, boolean completed, @Nullable Instant obtainedTime, String advancementId) {
-		Identifier id = Identifier.tryParse(criterionId);
+		Identifier id = Identifier.tryParse(criterionId.contains(":") ? criterionId : "minecraft:" + criterionId);
 		Component displayName;
+		net.minecraft.world.item.ItemStack icon = net.minecraft.world.item.ItemStack.EMPTY;
 		if (id != null) {
 			displayName = Component.translatableWithFallback(
 				"entity." + id.getNamespace() + "." + id.getPath(),
 				formatFallback(id.getPath())
 			);
+			try {
+				net.minecraft.resources.Identifier eggId = net.minecraft.resources.Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_spawn_egg");
+				var itemOpt = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(eggId);
+				if (itemOpt.isPresent()) {
+					var holder = itemOpt.get().builtInRegistryHolder();
+					if (holder != null && holder.areComponentsBound()) {
+						icon = new net.minecraft.world.item.ItemStack(itemOpt.get());
+					}
+				}
+			} catch (Throwable ignored) {
+			}
 		} else {
 			displayName = Component.literal(formatFallback(criterionId));
 		}
-		return new CriterionDetail(criterionId, displayName, completed, obtainedTime, "entity");
+		return new CriterionDetail(criterionId, displayName, completed, obtainedTime, "entity", icon);
 	}
 
 	private String formatFallback(String path) {

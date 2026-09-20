@@ -31,7 +31,7 @@ public class ItemCriterionResolver implements CriterionResolver {
 			|| advancementId.contains("plant_any_sniffer_seed")) {
 			return true;
 		}
-		Identifier id = Identifier.tryParse(criterionId);
+		Identifier id = Identifier.tryParse(criterionId.contains(":") ? criterionId : "minecraft:" + criterionId);
 		if (id != null) {
 			try {
 				return net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(id);
@@ -44,17 +44,39 @@ public class ItemCriterionResolver implements CriterionResolver {
 	@Override
 	public CriterionDetail resolve(String criterionId, boolean completed, @Nullable Instant obtainedTime, String advancementId) {
 		String itemPath = SPECIAL_ITEM_MAPPINGS.getOrDefault(criterionId, criterionId);
-		Identifier id = Identifier.tryParse(itemPath);
-		Component displayName;
+		Identifier id = Identifier.tryParse(itemPath.contains(":") ? itemPath : "minecraft:" + itemPath);
+		net.minecraft.world.item.ItemStack icon = net.minecraft.world.item.ItemStack.EMPTY;
+		Component displayName = null;
+
 		if (id != null) {
-			displayName = Component.translatableWithFallback(
-				"item." + id.getNamespace() + "." + id.getPath(),
-				formatFallback(id.getPath())
-			);
-		} else {
-			displayName = Component.literal(formatFallback(criterionId));
+			try {
+				var itemOpt = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(id);
+				if (itemOpt.isPresent()) {
+					var item = itemOpt.get();
+					displayName = Component.translatableWithFallback(
+						item.getDescriptionId(),
+						formatFallback(id.getPath())
+					);
+					var holder = item.builtInRegistryHolder();
+					if (holder != null && holder.areComponentsBound()) {
+						icon = new net.minecraft.world.item.ItemStack(item);
+					}
+				}
+			} catch (Throwable ignored) {
+			}
 		}
-		return new CriterionDetail(criterionId, displayName, completed, obtainedTime, "item");
+
+		if (displayName == null) {
+			if (id != null) {
+				displayName = Component.translatableWithFallback(
+					"item." + id.getNamespace() + "." + id.getPath(),
+					formatFallback(id.getPath())
+				);
+			} else {
+				displayName = Component.literal(formatFallback(criterionId));
+			}
+		}
+		return new CriterionDetail(criterionId, displayName, completed, obtainedTime, "item", icon);
 	}
 
 	private String formatFallback(String path) {

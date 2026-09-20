@@ -27,7 +27,19 @@ public class TrimPatternCriterionResolver implements CriterionResolver {
 			"trim_pattern.minecraft." + pattern,
 			formatFallback(pattern)
 		);
-		return new CriterionDetail(criterionId, displayName, completed, obtainedTime, "trim");
+		net.minecraft.world.item.ItemStack icon = net.minecraft.world.item.ItemStack.EMPTY;
+		try {
+			net.minecraft.resources.Identifier templateId = net.minecraft.resources.Identifier.fromNamespaceAndPath("minecraft", pattern + "_armor_trim_smithing_template");
+			var itemOpt = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(templateId);
+			if (itemOpt.isPresent()) {
+				var holder = itemOpt.get().builtInRegistryHolder();
+				if (holder != null && holder.areComponentsBound()) {
+					icon = new net.minecraft.world.item.ItemStack(itemOpt.get());
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+		return new CriterionDetail(criterionId, displayName, completed, obtainedTime, "trim", icon);
 	}
 
 	private String extractPatternName(String criterionId) {
