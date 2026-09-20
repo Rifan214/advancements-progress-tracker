@@ -37,7 +37,7 @@ Struktur data internal Minecraft 26.2:
 - `isDone()`: `boolean` — apakah advancement sudah selesai.
 - `hasProgress()`: `boolean` — apakah ada progress minimal satu criterion.
 - `getPercent()`: `float` — persentase penyelesaian (0.0f - 1.0f).
-- `getProgressText()`: `Component` — text progress vanilla (contoh: `"35/53"`).
+- `getProgressText()`: `Component` — text progress vanilla (contoh: `"35/55"`).
 - `getCompletedCriteria()`: `Iterable<String>` — daftar nama/ID criteria yang sudah terpenuhi.
 - `getRemainingCriteria()`: `Iterable<String>` — daftar nama/ID criteria yang belum terpenuhi.
 - `getCriterion(String id)`: `CriterionProgress` — status per criterion (memiliki `isDone()` dan `getObtained() : Instant`).
@@ -49,7 +49,7 @@ Struktur data internal Minecraft 26.2:
 Pada Minecraft 26.2:
 - Advancement ID: `minecraft:adventure/adventuring_time`.
 - Vanilla mendefinisikannya melalui `VanillaAdventureAdvancements.createAdventuringTime(...)`.
-- Daftar biome diperoleh dari generator parameter list `MultiNoiseBiomeSourceParameterList.Preset.usedBiomes()`, yang menghasilkan 53 biome Overworld.
+- Daftar biome diperoleh dari generator parameter list `MultiNoiseBiomeSourceParameterList.Preset.usedBiomes()`, yang menghasilkan 55 biome Overworld pada Minecraft 26.2 (termasuk *Pale Garden*).
 - Setiap biome ditambahkan sebagai criterion dengan nama ID:
   ```java
   String criterionName = biomeKey.identifier().toString(); // Contoh: "minecraft:plains"
@@ -62,7 +62,7 @@ Pada Minecraft 26.2:
 - Pada client:
   - `AdvancementProgress.getCompletedCriteria()` mengembalikan semua string biome yang sudah dikunjungi.
   - `AdvancementProgress.getRemainingCriteria()` mengembalikan semua string biome yang belum dikunjungi.
-  - Total biome = `advancement.requirements().size()` (53 biome).
+  - Total biome = `advancement.requirements().size()` (55 biome).
 
 ---
 
