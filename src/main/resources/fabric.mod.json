@@ -1,0 +1,37 @@
+{
+	"schemaVersion": 1,
+	"id": "advancements_progress_tracker",
+	"version": "${version}",
+	"name": "Advancements Progress Tracker",
+	"description": "Makes Minecraft advancement progress fully detailed, informative, and explorable.",
+	"authors": [
+		"Rifan214"
+	],
+	"contact": {
+		"sources": "https://github.com/Rifan214/advancements-progress-tracker"
+	},
+	"license": "MIT",
+	"icon": "assets/advancements_progress_tracker/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.rifan.advancementsprogresstracker.AdvancementsProgressTracker"
+		],
+		"client": [
+			"dev.rifan.advancementsprogresstracker.client.AdvancementsProgressTrackerClient"
+		]
+	},
+	"mixins": [
+		"advancements_progress_tracker.mixins.json",
+		{
+			"config": "advancements_progress_tracker.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

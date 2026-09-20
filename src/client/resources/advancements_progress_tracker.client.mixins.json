@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "dev.rifan.advancementsprogresstracker.mixin.client",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"ClientAdvancementsAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
