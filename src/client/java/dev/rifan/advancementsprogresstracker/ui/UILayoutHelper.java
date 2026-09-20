@@ -18,7 +18,11 @@ public final class UILayoutHelper {
 	}
 
 	public static int computeHeaderHeight(boolean stackToolbar) {
-		return stackToolbar ? 56 : 40;
+		return stackToolbar ? 58 : 40;
+	}
+
+	public static int computeAvailableEmptyStateWidth(int rightWidth) {
+		return Math.max(60, rightWidth - 32);
 	}
 
 	public static int computeAvailableDetailTextWidth(int rightWidth) {

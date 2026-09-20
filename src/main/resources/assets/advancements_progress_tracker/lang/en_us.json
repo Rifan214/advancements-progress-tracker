@@ -3,7 +3,7 @@
 	"advancements_progress_tracker.title": "Advancements Progress Tracker",
 	"advancements_progress_tracker.button": "Tracker",
 	"advancements_progress_tracker.search": "Search...",
-	"advancements_progress_tracker.search.hint": "Search advancements or criteria...",
+	"advancements_progress_tracker.search.hint": "Search...",
 	"advancements_progress_tracker.filter.all": "All",
 	"advancements_progress_tracker.filter.in_progress": "In Progress",
 	"advancements_progress_tracker.filter.completed": "Completed",
