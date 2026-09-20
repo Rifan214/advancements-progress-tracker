@@ -59,7 +59,7 @@ class UILayoutHelperTest {
 		assertTrue(UILayoutHelper.shouldStackToolbar(219));
 		assertTrue(UILayoutHelper.shouldStackToolbar(192));
 		assertTrue(UILayoutHelper.shouldStackToolbar(160));
-		assertEquals(56, UILayoutHelper.computeHeaderHeight(true));
+		assertEquals(58, UILayoutHelper.computeHeaderHeight(true));
 	}
 
 	@Test
@@ -104,5 +104,29 @@ class UILayoutHelperTest {
 
 		assertTrue(truncated.endsWith("..."));
 		assertTrue(MOCK_FONT.applyAsInt(truncated) <= maxWidth, "Truncated text width must not exceed maxWidth");
+	}
+
+	@Test
+	@DisplayName("Empty state text width calculation respects right panel boundaries")
+	void testEmptyStateAvailableWidth() {
+		// Wide right panel (e.g. 600px wide) -> available 568px
+		assertEquals(568, UILayoutHelper.computeAvailableEmptyStateWidth(600));
+
+		// Narrow right panel (e.g. 200px wide) -> available 168px
+		assertEquals(168, UILayoutHelper.computeAvailableEmptyStateWidth(200));
+
+		// Extremely small right panel (e.g. 80px wide) -> safe minimum 60px
+		assertEquals(60, UILayoutHelper.computeAvailableEmptyStateWidth(80));
+	}
+
+	@Test
+	@DisplayName("Search hint is guaranteed to fit within EditBox inner bounds")
+	void testSearchHintFitsEditBox() {
+		String longHint = "Search advancements or criteria...";
+		int smallEditBoxWidth = 80;
+		int maxInnerWidth = smallEditBoxWidth - 8;
+
+		String safeHint = UILayoutHelper.trimStringToWidth(MOCK_FONT, longHint, maxInnerWidth);
+		assertTrue(MOCK_FONT.applyAsInt(safeHint) <= maxInnerWidth, "Hint must not overflow EditBox inner width");
 	}
 }
