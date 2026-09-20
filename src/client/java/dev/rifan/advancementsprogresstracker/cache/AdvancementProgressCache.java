@@ -99,21 +99,23 @@ public class AdvancementProgressCache {
 		Map<Identifier, AdvancementProgressInfo> newCacheById = new HashMap<>();
 		List<AdvancementProgressInfo> newList = new ArrayList<>();
 
-		// 1. Process all advancement nodes in the advancement tree
+		// 1. Process all advancement nodes in the advancement tree with player display info
 		if (clientAdvancements.getTree() != null) {
 			for (AdvancementNode node : clientAdvancements.getTree().nodes()) {
 				AdvancementHolder holder = node.holder();
-				AdvancementProgress progress = progressMap.get(holder);
-				AdvancementProgressInfo info = reader.read(holder, progress);
-				newCacheById.put(holder.id(), info);
-				newList.add(info);
+				if (holder.value().display().isPresent()) {
+					AdvancementProgress progress = progressMap.get(holder);
+					AdvancementProgressInfo info = reader.read(holder, progress);
+					newCacheById.put(holder.id(), info);
+					newList.add(info);
+				}
 			}
 		}
 
-		// 2. Also process any advancements in progress map that might not be in the tree
+		// 2. Also process any player-facing advancements in progress map that might not be in the tree
 		for (Map.Entry<AdvancementHolder, AdvancementProgress> entry : progressMap.entrySet()) {
 			AdvancementHolder holder = entry.getKey();
-			if (!newCacheById.containsKey(holder.id())) {
+			if (!newCacheById.containsKey(holder.id()) && holder.value().display().isPresent()) {
 				AdvancementProgressInfo info = reader.read(holder, entry.getValue());
 				newCacheById.put(holder.id(), info);
 				newList.add(info);
