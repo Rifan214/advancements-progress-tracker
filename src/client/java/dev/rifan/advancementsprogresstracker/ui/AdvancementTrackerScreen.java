@@ -63,11 +63,17 @@ public class AdvancementTrackerScreen extends Screen {
 	@Nullable
 	private AdvancementProgressInfo selectedAdvancement;
 
-	// Scroll offsets
+	// Scroll offsets and drag state
 	private double leftScroll = 0;
 	private double maxLeftScroll = 0;
+	private boolean isDraggingLeftScroll = false;
+	private double leftDragClickOffsetY = 0;
+
 	private double rightScroll = 0;
 	private double maxRightScroll = 0;
+	private boolean isDraggingRightScroll = false;
+	private double rightDragClickOffsetY = 0;
+	private int lastRightContentHeight = 0;
 
 	// Dimensions
 	private int leftPanelWidth;
@@ -242,7 +248,40 @@ public class AdvancementTrackerScreen extends Screen {
 		double mouseX = event.x();
 		double mouseY = event.y();
 
-		if (mouseX >= 10 && mouseX <= leftPanelWidth && mouseY >= headerHeight && mouseY <= height - footerHeight) {
+		if (event.button() == 0) { // Left-click
+			int visibleHeight = this.height - headerHeight - footerHeight;
+
+			// Check left scrollbar thumb
+			if (maxLeftScroll > 0) {
+				int totalLeftContent = filteredAdvancements.size() * 36;
+				int thumbHeight = Math.max(24, Math.min(visibleHeight, (int) ((double) visibleHeight * visibleHeight / (double) Math.max(1, totalLeftContent))));
+				int availableTrackDistance = visibleHeight - thumbHeight;
+				int thumbY = headerHeight + (availableTrackDistance > 0 ? (int) (availableTrackDistance * (leftScroll / maxLeftScroll)) : 0);
+				int scrollbarX = leftPanelWidth - 6;
+
+				if (mouseX >= scrollbarX - 2 && mouseX <= scrollbarX + 8 && mouseY >= thumbY && mouseY <= thumbY + thumbHeight) {
+					this.isDraggingLeftScroll = true;
+					this.leftDragClickOffsetY = mouseY - thumbY;
+					return true;
+				}
+			}
+
+			// Check right scrollbar thumb
+			if (maxRightScroll > 0) {
+				int thumbHeight = Math.max(24, Math.min(visibleHeight, (int) ((double) visibleHeight * visibleHeight / (double) Math.max(1, lastRightContentHeight))));
+				int availableTrackDistance = visibleHeight - thumbHeight;
+				int thumbY = headerHeight + (availableTrackDistance > 0 ? (int) (availableTrackDistance * (rightScroll / maxRightScroll)) : 0);
+				int scrollbarX = this.width - 8;
+
+				if (mouseX >= scrollbarX - 2 && mouseX <= scrollbarX + 8 && mouseY >= thumbY && mouseY <= thumbY + thumbHeight) {
+					this.isDraggingRightScroll = true;
+					this.rightDragClickOffsetY = mouseY - thumbY;
+					return true;
+				}
+			}
+		}
+
+		if (mouseX >= 10 && mouseX <= leftPanelWidth - 8 && mouseY >= headerHeight && mouseY <= height - footerHeight) {
 			// Click inside left panel list
 			int listY = (int) (mouseY - headerHeight + leftScroll);
 			int itemHeight = 36;
@@ -256,6 +295,47 @@ public class AdvancementTrackerScreen extends Screen {
 		}
 
 		return super.mouseClicked(event, doubleClick);
+	}
+
+	@Override
+	public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+		int visibleHeight = this.height - headerHeight - footerHeight;
+
+		if (this.isDraggingLeftScroll && maxLeftScroll > 0) {
+			int totalLeftContent = filteredAdvancements.size() * 36;
+			int thumbHeight = Math.max(24, Math.min(visibleHeight, (int) ((double) visibleHeight * visibleHeight / (double) Math.max(1, totalLeftContent))));
+			int availableTrackDistance = visibleHeight - thumbHeight;
+			if (availableTrackDistance > 0) {
+				double newThumbY = event.y() - leftDragClickOffsetY;
+				double offsetInTrack = newThumbY - headerHeight;
+				double newScroll = (offsetInTrack / (double) availableTrackDistance) * maxLeftScroll;
+				this.leftScroll = Math.max(0, Math.min(maxLeftScroll, newScroll));
+			}
+			return true;
+		}
+
+		if (this.isDraggingRightScroll && maxRightScroll > 0) {
+			int thumbHeight = Math.max(24, Math.min(visibleHeight, (int) ((double) visibleHeight * visibleHeight / (double) Math.max(1, lastRightContentHeight))));
+			int availableTrackDistance = visibleHeight - thumbHeight;
+			if (availableTrackDistance > 0) {
+				double newThumbY = event.y() - rightDragClickOffsetY;
+				double offsetInTrack = newThumbY - headerHeight;
+				double newScroll = (offsetInTrack / (double) availableTrackDistance) * maxRightScroll;
+				this.rightScroll = Math.max(0, Math.min(maxRightScroll, newScroll));
+			}
+			return true;
+		}
+
+		return super.mouseDragged(event, deltaX, deltaY);
+	}
+
+	@Override
+	public boolean mouseReleased(MouseButtonEvent event) {
+		if (event.button() == 0) {
+			this.isDraggingLeftScroll = false;
+			this.isDraggingRightScroll = false;
+		}
+		return super.mouseReleased(event);
 	}
 
 	@Override
@@ -350,7 +430,7 @@ public class AdvancementTrackerScreen extends Screen {
 
 		// Scrollbar
 		if (maxLeftScroll > 0) {
-			renderScrollbar(graphics, leftPanelWidth - 5, headerHeight, visibleHeight, leftScroll, maxLeftScroll);
+			renderScrollbar(graphics, leftPanelWidth - 6, headerHeight, visibleHeight, leftScroll, maxLeftScroll, totalContentHeight, isDraggingLeftScroll, mouseX, mouseY);
 		}
 	}
 
@@ -360,7 +440,7 @@ public class AdvancementTrackerScreen extends Screen {
 		int visibleHeight = this.height - headerHeight - footerHeight;
 
 		if (selectedAdvancement == null) {
-			graphics.centeredText(this.font, Component.translatableWithFallback("advancements_progress_tracker.select_prompt", "Select an advancement to inspect progress"), leftPanelWidth + (this.width - leftPanelWidth) / 2, this.height / 2, 0xFF888888);
+			graphics.centeredText(this.font, Component.translatableWithFallback("advancements_progress_tracker.select_prompt", "Select an advancement from the list to view detailed progress."), leftPanelWidth + (this.width - leftPanelWidth) / 2, this.height / 2, 0xFF888888);
 			return;
 		}
 
@@ -390,29 +470,33 @@ public class AdvancementTrackerScreen extends Screen {
 		currentY += cardHeight + 10;
 
 		// 2. Main Progress Bar Card
-		int barCardHeight = 44;
+		int barCardHeight = 46;
 		graphics.fill(rightX, currentY, rightX + rightWidth, currentY + barCardHeight, 0x19FFFFFF);
 
-		// Progress label
-		String progressSummary = info.getProgressFormatted() + " (" + info.getPercentInt() + "%)";
-		Component progressTitle = Component.translatableWithFallback("advancements_progress_tracker.progress", "Progress");
-		graphics.text(this.font, progressTitle, rightX + 8, currentY + 6, 0xFFFFFFFF, true);
-
 		if (info.isOrRequirement()) {
+			Component reqTitle = Component.translatableWithFallback("advancements_progress_tracker.requirements", "Requirements");
+			String reqProgress = info.getProgressFormatted() + " (" + info.getPercentInt() + "%)";
+			graphics.text(this.font, reqTitle, rightX + 8, currentY + 6, 0xFFFFFFFF, true);
+			graphics.text(this.font, reqProgress, rightX + 8 + this.font.width(reqTitle) + 6, currentY + 6, info.isCompleted() ? 0xFF2ECC71 : 0xFFFFAA00, true);
+
 			Component orNote = Component.translatable(
-				"advancements_progress_tracker.or_requirement",
-				info.totalRequirements(),
+				"advancements_progress_tracker.criteria_fulfilled",
+				info.completedCriteriaCount(),
 				info.totalCriteria()
 			);
-			graphics.text(this.font, orNote, rightX + 16 + this.font.width(progressTitle), currentY + 6, 0xFFAAAAAA, false);
+			int noteW = this.font.width(orNote);
+			graphics.text(this.font, orNote, rightX + rightWidth - noteW - 8, currentY + 6, 0xFFAAAAAA, false);
+		} else {
+			Component progressTitle = Component.translatableWithFallback("advancements_progress_tracker.progress", "Progress");
+			String progressSummary = info.getProgressFormatted() + " (" + info.getPercentInt() + "%)";
+			graphics.text(this.font, progressTitle, rightX + 8, currentY + 6, 0xFFFFFFFF, true);
+			int summaryWidth = this.font.width(progressSummary);
+			graphics.text(this.font, progressSummary, rightX + rightWidth - summaryWidth - 8, currentY + 6, info.isCompleted() ? 0xFF2ECC71 : 0xFFFFAA00, true);
 		}
-
-		int summaryWidth = this.font.width(progressSummary);
-		graphics.text(this.font, progressSummary, rightX + rightWidth - summaryWidth - 8, currentY + 6, info.isCompleted() ? 0xFF2ECC71 : 0xFFFFAA00, true);
 
 		// Large bar
 		int pBarX = rightX + 8;
-		int pBarY = currentY + 20;
+		int pBarY = currentY + 22;
 		int pBarW = rightWidth - 16;
 		int pBarH = 14;
 		graphics.fill(pBarX, pBarY, pBarX + pBarW, pBarY + pBarH, 0xFF111115);
@@ -424,59 +508,80 @@ public class AdvancementTrackerScreen extends Screen {
 
 		currentY += barCardHeight + 12;
 
-		// 3. Criteria Sections
+		// 3. Criteria Sections (The MAIN content!)
 		List<CriterionDetail> completed = info.completedCriteria();
 		List<CriterionDetail> remaining = info.remainingCriteria();
 
-		int rowHeight = 18;
+		int rowHeight = 22;
 
 		// Completed Section Header
-		graphics.fill(rightX, currentY, rightX + rightWidth, currentY + 18, 0x222ECC71);
+		graphics.fill(rightX, currentY, rightX + rightWidth, currentY + 22, 0x222ECC71);
+		graphics.fill(rightX, currentY, rightX + 3, currentY + 22, 0xFF2ECC71);
 		String completedHeader = "✓ " + Component.translatableWithFallback("advancements_progress_tracker.completed", "Completed").getString() + " (" + completed.size() + ")";
-		graphics.text(this.font, completedHeader, rightX + 8, currentY + 5, 0xFF2ECC71, true);
-		currentY += 22;
+		graphics.text(this.font, completedHeader, rightX + 10, currentY + 7, 0xFF2ECC71, true);
+		graphics.fill(rightX, currentY + 22, rightX + rightWidth, currentY + 23, 0x332ECC71);
+		currentY += 26;
 
 		if (completed.isEmpty()) {
-			graphics.text(this.font, Component.translatableWithFallback("advancements_progress_tracker.none", "None yet"), rightX + 16, currentY + 2, 0xFF666666, false);
-			currentY += rowHeight;
+			graphics.text(this.font, Component.translatableWithFallback("advancements_progress_tracker.none", "No criteria completed yet."), rightX + 16, currentY + 4, 0xFF888899, false);
+			currentY += 20;
 		} else {
 			for (CriterionDetail cd : completed) {
 				if (currentY >= headerHeight - rowHeight && currentY <= this.height - footerHeight) {
-					graphics.fill(rightX + 4, currentY, rightX + rightWidth - 4, currentY + rowHeight - 2, 0x0AFFFFFF);
-					graphics.text(this.font, "✓", rightX + 8, currentY + 3, 0xFF2ECC71, false);
-					graphics.text(this.font, cd.displayName(), rightX + 22, currentY + 3, 0xFFE0E0E0, false);
+					boolean isHovered = mouseX >= rightX && mouseX <= rightX + rightWidth && mouseY >= currentY && mouseY <= currentY + rowHeight;
+					int rowBg = isHovered ? 0x18FFFFFF : 0x08FFFFFF;
+					graphics.fill(rightX + 4, currentY, rightX + rightWidth - 4, currentY + rowHeight - 2, rowBg);
+					graphics.text(this.font, "✓", rightX + 8, currentY + 6, 0xFF2ECC71, false);
+
+					if (!cd.icon().isEmpty()) {
+						graphics.item(cd.icon(), rightX + 22, currentY + 2);
+						graphics.text(this.font, cd.displayName(), rightX + 42, currentY + 6, 0xFFE0E0E0, false);
+					} else {
+						graphics.text(this.font, cd.displayName(), rightX + 22, currentY + 6, 0xFFE0E0E0, false);
+					}
 				}
 				currentY += rowHeight;
 			}
 		}
 
-		currentY += 8;
+		currentY += 12;
 
 		// Remaining Section Header
-		graphics.fill(rightX, currentY, rightX + rightWidth, currentY + 18, 0x22F39C12);
+		graphics.fill(rightX, currentY, rightX + rightWidth, currentY + 22, 0x22F39C12);
+		graphics.fill(rightX, currentY, rightX + 3, currentY + 22, 0xFFF39C12);
 		String remainingHeader = "○ " + Component.translatableWithFallback("advancements_progress_tracker.remaining", "Remaining").getString() + " (" + remaining.size() + ")";
-		graphics.text(this.font, remainingHeader, rightX + 8, currentY + 5, 0xFFF39C12, true);
-		currentY += 22;
+		graphics.text(this.font, remainingHeader, rightX + 10, currentY + 7, 0xFFF39C12, true);
+		graphics.fill(rightX, currentY + 22, rightX + rightWidth, currentY + 23, 0x33F39C12);
+		currentY += 26;
 
 		if (remaining.isEmpty()) {
-			graphics.text(this.font, Component.translatableWithFallback("advancements_progress_tracker.all_completed", "All criteria completed!"), rightX + 16, currentY + 2, 0xFF2ECC71, false);
-			currentY += rowHeight;
+			graphics.text(this.font, Component.translatableWithFallback("advancements_progress_tracker.all_completed", "All required criteria completed!"), rightX + 16, currentY + 4, 0xFF2ECC71, false);
+			currentY += 20;
 		} else {
 			for (CriterionDetail cd : remaining) {
 				if (currentY >= headerHeight - rowHeight && currentY <= this.height - footerHeight) {
-					graphics.fill(rightX + 4, currentY, rightX + rightWidth - 4, currentY + rowHeight - 2, 0x0AFFFFFF);
-					graphics.text(this.font, "○", rightX + 8, currentY + 3, 0xFF888888, false);
-					graphics.text(this.font, cd.displayName(), rightX + 22, currentY + 3, 0xFFAAAAAA, false);
+					boolean isHovered = mouseX >= rightX && mouseX <= rightX + rightWidth && mouseY >= currentY && mouseY <= currentY + rowHeight;
+					int rowBg = isHovered ? 0x18FFFFFF : 0x08FFFFFF;
+					graphics.fill(rightX + 4, currentY, rightX + rightWidth - 4, currentY + rowHeight - 2, rowBg);
+					graphics.text(this.font, "○", rightX + 8, currentY + 6, 0xFF888888, false);
+
+					if (!cd.icon().isEmpty()) {
+						graphics.item(cd.icon(), rightX + 22, currentY + 2);
+						graphics.text(this.font, cd.displayName(), rightX + 42, currentY + 6, 0xFFAAAAAA, false);
+					} else {
+						graphics.text(this.font, cd.displayName(), rightX + 22, currentY + 6, 0xFFAAAAAA, false);
+					}
 				}
 				currentY += rowHeight;
 			}
 		}
 
 		int totalContentH = currentY + (int) rightScroll - headerHeight;
+		this.lastRightContentHeight = totalContentH;
 		this.maxRightScroll = Math.max(0, totalContentH - visibleHeight + 20);
 
 		if (maxRightScroll > 0) {
-			renderScrollbar(graphics, this.width - 6, headerHeight, visibleHeight, rightScroll, maxRightScroll);
+			renderScrollbar(graphics, this.width - 8, headerHeight, visibleHeight, rightScroll, maxRightScroll, totalContentH, isDraggingRightScroll, mouseX, mouseY);
 		}
 	}
 
@@ -494,12 +599,18 @@ public class AdvancementTrackerScreen extends Screen {
 		graphics.text(this.font, stats, 12, this.height - 18, 0xFF888899, false);
 	}
 
-	private void renderScrollbar(GuiGraphicsExtractor graphics, int x, int top, int height, double scroll, double maxScroll) {
-		int barWidth = 4;
-		graphics.fill(x, top, x + barWidth, top + height, 0x22000000);
-		int thumbHeight = Math.max(20, (int) ((double) height * height / (height + maxScroll)));
-		int thumbY = top + (int) ((height - thumbHeight) * (scroll / maxScroll));
-		graphics.fill(x, thumbY, x + barWidth, thumbY + thumbHeight, 0x88FFFFFF);
+	private void renderScrollbar(GuiGraphicsExtractor graphics, int x, int top, int height, double scroll, double maxScroll, int contentHeight, boolean isDragging, int mouseX, int mouseY) {
+		int barWidth = 6;
+		graphics.fill(x, top, x + barWidth, top + height, 0x33000000);
+
+		int thumbHeight = Math.max(24, Math.min(height, (int) ((double) height * height / (double) Math.max(1, contentHeight))));
+		int availableTrack = height - thumbHeight;
+		int thumbY = top + (availableTrack > 0 && maxScroll > 0 ? (int) (availableTrack * (scroll / maxScroll)) : 0);
+
+		boolean isHovered = mouseX >= x - 2 && mouseX <= x + barWidth + 2 && mouseY >= thumbY && mouseY <= thumbY + thumbHeight;
+		int thumbColor = isDragging ? 0xFFFFFFFF : (isHovered ? 0xCCFFFFFF : 0x77FFFFFF);
+
+		graphics.fill(x, thumbY, x + barWidth, thumbY + thumbHeight, thumbColor);
 	}
 
 	private ItemStack getAdvancementIcon(AdvancementProgressInfo info) {

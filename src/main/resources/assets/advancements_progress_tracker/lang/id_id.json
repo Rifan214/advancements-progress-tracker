@@ -10,13 +10,15 @@
 	"advancements_progress_tracker.filter.not_started": "Belum Dimulai",
 	"advancements_progress_tracker.filter.multi_only": "Multi-Kriteria",
 	"advancements_progress_tracker.progress": "Kemajuan",
+	"advancements_progress_tracker.requirements": "Kebutuhan",
 	"advancements_progress_tracker.completed": "Sudah Selesai",
 	"advancements_progress_tracker.remaining": "Belum Selesai",
-	"advancements_progress_tracker.none": "Belum ada",
-	"advancements_progress_tracker.all_completed": "Semua kriteria sudah selesai!",
+	"advancements_progress_tracker.none": "Belum ada kriteria yang selesai.",
+	"advancements_progress_tracker.all_completed": "Semua kriteria yang dibutuhkan telah selesai!",
 	"advancements_progress_tracker.select_prompt": "Pilih advancement dari daftar untuk melihat detail kemajuan kriteria.",
 	"advancements_progress_tracker.status.not_started": "Belum Dimulai",
 	"advancements_progress_tracker.status.in_progress": "Sedang Berjalan",
 	"advancements_progress_tracker.status.completed": "Selesai",
-	"advancements_progress_tracker.or_requirement": "Membutuhkan %d dari %d kriteria"
+	"advancements_progress_tracker.or_requirement": "Membutuhkan %d dari %d kriteria",
+	"advancements_progress_tracker.criteria_fulfilled": "%d dari %d kriteria terpenuhi"
 }

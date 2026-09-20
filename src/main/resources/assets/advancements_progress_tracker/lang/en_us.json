@@ -10,13 +10,15 @@
 	"advancements_progress_tracker.filter.not_started": "Not Started",
 	"advancements_progress_tracker.filter.multi_only": "Multi-Criteria",
 	"advancements_progress_tracker.progress": "Progress",
+	"advancements_progress_tracker.requirements": "Requirements",
 	"advancements_progress_tracker.completed": "Completed",
 	"advancements_progress_tracker.remaining": "Remaining",
-	"advancements_progress_tracker.none": "None yet",
-	"advancements_progress_tracker.all_completed": "All criteria completed!",
+	"advancements_progress_tracker.none": "No criteria completed yet.",
+	"advancements_progress_tracker.all_completed": "All required criteria completed!",
 	"advancements_progress_tracker.select_prompt": "Select an advancement from the list to view detailed progress.",
 	"advancements_progress_tracker.status.not_started": "Not Started",
 	"advancements_progress_tracker.status.in_progress": "In Progress",
 	"advancements_progress_tracker.status.completed": "Completed",
-	"advancements_progress_tracker.or_requirement": "Requires %d of %d criteria"
+	"advancements_progress_tracker.or_requirement": "Requires %d of %d criteria",
+	"advancements_progress_tracker.criteria_fulfilled": "%d of %d criteria fulfilled"
 }
