@@ -28,6 +28,18 @@ public class CriterionResolverRegistryTest {
 	}
 
 	@Test
+	void testAdventuringTimeResolvesDappledForestBiome() {
+		CriterionResolverRegistry registry = CriterionResolverRegistry.getInstance();
+		CriterionDetail detail = registry.resolve("minecraft:dappled_forest", true, null, "minecraft:adventure/adventuring_time");
+
+		assertNotNull(detail);
+		assertEquals("minecraft:dappled_forest", detail.id());
+		assertTrue(detail.completed());
+		assertEquals("biome", detail.category());
+		assertEquals("Dappled Forest", detail.displayName().getString());
+	}
+
+	@Test
 	void testNetherExploreResolvesToBiome() {
 		CriterionResolverRegistry registry = CriterionResolverRegistry.getInstance();
 		CriterionDetail detail = registry.resolve("minecraft:nether_wastes", true, null, "minecraft:nether/explore_nether");

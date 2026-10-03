@@ -220,6 +220,39 @@ public class AdvancementRequirementsSemanticsTest {
 	}
 
 	@Test
+	void testAdventuringTime26_3WithDappledForest() {
+		// Minecraft 26.3 Adventuring Time has 56 biomes including dappled_forest
+		List<String> biomes = new java.util.ArrayList<>();
+		biomes.add("minecraft:plains");
+		biomes.add("minecraft:desert");
+		biomes.add("minecraft:forest");
+		biomes.add("minecraft:dappled_forest");
+		for (int i = 4; i < 56; i++) {
+			biomes.add("minecraft:biome_" + i);
+		}
+		AdvancementRequirements reqs = AdvancementRequirements.allOf(biomes);
+		AdvancementHolder holder = createHolder("adventure/adventuring_time", reqs);
+
+		AdvancementProgress progress = new AdvancementProgress();
+		progress.update(reqs);
+		progress.grantProgress("minecraft:plains");
+		progress.grantProgress("minecraft:dappled_forest");
+
+		AdvancementProgressReader reader = new AdvancementProgressReader();
+		AdvancementProgressInfo info = reader.read(holder, progress);
+
+		assertEquals(56, info.totalRequirements());
+		assertEquals(2, info.completedRequirements());
+		assertEquals(54, info.remainingRequirements());
+		assertEquals(56, info.totalCriteria());
+		assertEquals(2, info.completedCriteria().size());
+		assertEquals(54, info.remainingCriteria().size());
+		assertEquals("2 / 56", info.getProgressFormatted());
+		assertTrue(info.completedCriteria().stream().anyMatch(c -> c.id().equals("minecraft:dappled_forest")));
+		assertTrue(info.completedCriteria().stream().allMatch(c -> c.category().equals("biome")));
+	}
+
+	@Test
 	void testOrRequirementSemanticsRegression() {
 		// Test 4: OR requirement - 1/1 requirement, 1/41 criteria completed
 		List<String> mobs = new java.util.ArrayList<>();
