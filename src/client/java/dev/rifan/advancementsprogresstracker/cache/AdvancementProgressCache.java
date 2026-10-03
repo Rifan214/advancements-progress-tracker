@@ -93,15 +93,15 @@ public class AdvancementProgressCache {
 		if (clientAdvancements instanceof ClientAdvancementsAccessor accessor) {
 			progressMap = accessor.getProgressMap();
 		} else {
-			progressMap = Collections.emptyMap();
+			progressMap = clientAdvancements.progress() != null ? clientAdvancements.progress() : Collections.emptyMap();
 		}
 
 		Map<Identifier, AdvancementProgressInfo> newCacheById = new HashMap<>();
 		List<AdvancementProgressInfo> newList = new ArrayList<>();
 
 		// 1. Process all advancement nodes in the advancement tree with player display info
-		if (clientAdvancements.getTree() != null) {
-			for (AdvancementNode node : clientAdvancements.getTree().nodes()) {
+		if (clientAdvancements.tree() != null) {
+			for (AdvancementNode node : clientAdvancements.tree().nodes()) {
 				AdvancementHolder holder = node.holder();
 				if (holder.value().display().isPresent()) {
 					AdvancementProgress progress = progressMap.get(holder);

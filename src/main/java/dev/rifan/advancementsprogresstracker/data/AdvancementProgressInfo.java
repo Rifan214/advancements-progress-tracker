@@ -47,7 +47,7 @@ public record AdvancementProgressInfo(
 	public Component title() {
 		DisplayInfo displayInfo = display();
 		if (displayInfo != null) {
-			return displayInfo.getTitle();
+			return displayInfo.title();
 		}
 		return holder.value().name().orElse(Component.literal(holder.id().toString()));
 	}
@@ -55,14 +55,14 @@ public record AdvancementProgressInfo(
 	public Component description() {
 		DisplayInfo displayInfo = display();
 		if (displayInfo != null) {
-			return displayInfo.getDescription();
+			return displayInfo.description();
 		}
 		return Component.empty();
 	}
 
 	public AdvancementType type() {
 		DisplayInfo displayInfo = display();
-		return displayInfo != null ? displayInfo.getType() : AdvancementType.TASK;
+		return displayInfo != null ? displayInfo.type() : AdvancementType.TASK;
 	}
 
 	public boolean isCompleted() {

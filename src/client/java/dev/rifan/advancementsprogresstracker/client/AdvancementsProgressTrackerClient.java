@@ -7,11 +7,11 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +27,7 @@ public class AdvancementsProgressTrackerClient implements ClientModInitializer {
 		// 1. Register Keybinding
 		OPEN_TRACKER_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 			"key.advancements_progress_tracker.open",
-			GLFW.GLFW_KEY_H,
+			InputConstants.KEY_H,
 			KeyMapping.Category.MISC
 		));
 

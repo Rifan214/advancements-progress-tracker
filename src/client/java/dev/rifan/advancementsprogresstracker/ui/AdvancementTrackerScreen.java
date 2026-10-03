@@ -759,9 +759,9 @@ public class AdvancementTrackerScreen extends Screen {
 	}
 
 	private ItemStack getAdvancementIcon(AdvancementProgressInfo info) {
-		if (info.display() != null && info.display().getIcon() != null) {
+		if (info.display() != null && info.display().icon() != null) {
 			try {
-				return info.display().getIcon().create();
+				return info.display().icon().create();
 			} catch (Throwable ignored) {
 			}
 		}
