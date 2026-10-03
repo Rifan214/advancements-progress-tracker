@@ -10,7 +10,7 @@ A lightweight, modern Minecraft Fabric mod that makes advancement progress fully
 * **Separation of Completed & Remaining**: Visually distinguishes completed criteria (`✓`) from remaining goals (`○`).
 * **Meaningful Criterion Names**: Automatically resolves criteria into human-readable, localized names (biomes, mobs, items, armor trim patterns, animal variants) rather than raw internal criterion IDs.
 * **Requirements Semantics Aware**: Correctly handles Minecraft's advancement logic:
-  * **Strict AND**: All criteria required (e.g. *Adventuring Time* with 55 biomes, *Monsters Hunted* with 41 mobs).
+  * **Strict AND**: All criteria required (e.g. *Adventuring Time* with 56 biomes, *Monsters Hunted* with 41 mobs).
   * **Strict OR**: Any 1 criterion required (e.g. *Monster Hunter*, *Crafting a New Look*, *A Seedy Place*).
   * **Mixed (CNF)**: Combined requirements (e.g. *Careful Restoration* requiring both a structure loot and a pottery sherd).
 * **Dynamic Requirement Inspection**: Never relies on static hardcoded lists. Dynamically inspects Minecraft's active advancement definitions (seamlessly adapts to datapacks, vanilla updates, and modded advancements).
@@ -30,9 +30,9 @@ A lightweight, modern Minecraft Fabric mod that makes advancement progress fully
 
 | Component | Target Version |
 | :--- | :--- |
-| **Minecraft Java Edition** | `26.2` |
-| **Fabric Loader** | `0.19.3` or higher |
-| **Fabric API** | Compatible with Minecraft 26.2 |
+| **Minecraft Java Edition** | `26.3` |
+| **Fabric Loader** | `0.19.5` or higher |
+| **Fabric API** | `0.161.0+26.3` |
 | **Java** | Java 25 (Temurin / Eclipse Adoptium recommended) |
 | **Mod Loader** | **Fabric only** |
 
@@ -40,9 +40,9 @@ A lightweight, modern Minecraft Fabric mod that makes advancement progress fully
 
 ## Installation
 
-1. Ensure **Minecraft Java Edition 26.2** is installed.
-2. Install **Fabric Loader** version `0.19.3` or higher for Minecraft 26.2.
-3. Download the compatible **Fabric API** jar and place it into your `.minecraft/mods/` folder.
+1. Ensure **Minecraft Java Edition 26.3** is installed.
+2. Install **Fabric Loader** version `0.19.5` or higher for Minecraft 26.3.
+3. Download the compatible **Fabric API** (`0.161.0+26.3`) jar and place it into your `.minecraft/mods/` folder.
 4. Download the `advancements-progress-tracker-<version>.jar` from releases or build from source.
 5. Place the mod jar into your `.minecraft/mods/` directory.
 6. Launch Minecraft using the Fabric profile.
@@ -64,7 +64,7 @@ You can access the Progress Tracker through two methods:
 ### UI Controls
 * **Search Box**: Type in the search box to filter advancements or criteria dynamically in real-time.
 * **Filter Button**: Click to toggle between `[All]`, `[In Progress]`, `[Completed]`, `[Not Started]`, and `[Multi-Criteria]`.
-* **Mouse Wheel**: Scroll either panel independently to navigate long criteria lists (e.g. 55 biomes for *Adventuring Time* in Minecraft 26.2).
+* **Mouse Wheel**: Scroll either panel independently to navigate long criteria lists (e.g. 56 biomes for *Adventuring Time* in Minecraft 26.3).
 * **Done / Esc**: Returns to the previous screen or resumes gameplay.
 
 ---
@@ -84,7 +84,7 @@ You can access the Progress Tracker through two methods:
 ## Criterion Resolvers & Limitations
 
 The mod uses an extensible resolver pipeline:
-* **Biome Resolver**: Resolves Overworld (55 biomes) and Nether biomes to localized vanilla names (`biome.minecraft.<id>`).
+* **Biome Resolver**: Resolves Overworld (56 biomes including *Dappled Forest*) and Nether biomes to localized vanilla names (`biome.minecraft.<id>`).
 * **Entity Resolver**: Resolves hostile mobs and breedable animals to localized entity names (`entity.minecraft.<id>`).
 * **Item Resolver**: Resolves food items (*Balanced Diet*), armor pieces (*Suit Up*, *Cover Me in Diamonds*), fish, and seeds to localized item names (`item.minecraft.<id>`).
 * **Trim Pattern Resolver**: Resolves armor trim smithing templates (*Smithing with Style*, *Crafting a New Look*) to official trim pattern names (`trim_pattern.minecraft.<id>`).

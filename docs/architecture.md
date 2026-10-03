@@ -1,17 +1,17 @@
-# Minecraft 26.2 Advancements Architecture & Discovery
+# Minecraft 26.3 Advancements Architecture & Discovery
 
-Dokumen ini merangkum hasil riset dan verifikasi mendalam terhadap sistem advancement pada **Minecraft Java Edition 26.2** (Fabric Loader 0.19.3, Java 25).
+Dokumen ini merangkum hasil riset dan verifikasi mendalam terhadap sistem advancement pada **Minecraft Java Edition 26.3** (Fabric Loader 0.19.5, Java 25).
 
 ---
 
 ## 1. Bagaimana Advancement Progress Tersedia
 
-Pada Minecraft 26.2, sistem advancement pada client didorong sepenuhnya oleh paket jaringan vanilla dari server:
+Pada Minecraft 26.3, sistem advancement pada client didorong sepenuhnya oleh paket jaringan vanilla dari server:
 - Saat player masuk ke world (baik world baru, world lama, singleplayer, maupun multiplayer server), server mengirimkan packet `ClientboundUpdateAdvancementsPacket`.
 - Packet ini diterima oleh `net.minecraft.client.multiplayer.ClientAdvancements`.
-- `ClientAdvancements` mengelola dua komponen penting:
-  1. `tree`: `net.minecraft.advancements.AdvancementTree` — menyimpan seluruh node hierarki advancement (`AdvancementNode` dan `AdvancementHolder`).
-  2. `progress`: `Map<AdvancementHolder, AdvancementProgress>` — menyimpan progress terkini untuk setiap advancement milik player yang sedang aktif.
+- `ClientAdvancements` mengelola komponen penting:
+  1. `tree`: `net.minecraft.advancements.AdvancementTree` — diakses via `clientAdvancements.tree()` (menggantikan `getTree()`), menyimpan seluruh node hierarki advancement (`AdvancementNode` dan `AdvancementHolder`).
+  2. `progress`: `Map<AdvancementHolder, AdvancementProgress>` — menyimpan progress terkini untuk setiap advancement milik player yang sedang aktif. Dapat diakses via `ClientAdvancementsAccessor` atau method native `clientAdvancements.progress()`.
   3. `listener`: `ClientAdvancements.Listener` — interface yang menerima event saat root/task advancement ditambahkan, dihapus, atau saat progress di-update (`onUpdateAdvancementProgress(AdvancementNode, AdvancementProgress)`).
 
 Karena data ini sudah disinkronkan secara realtime oleh vanilla ke client, mod dapat beroperasi sebagai **Client-side mod** murni tanpa membutuhkan mod di server atau protokol jaringan khusus.
@@ -20,14 +20,14 @@ Karena data ini sudah disinkronkan secara realtime oleh vanilla ke client, mod d
 
 ## 2. Bagaimana Criteria Direpresentasikan
 
-Struktur data internal Minecraft 26.2:
+Struktur data internal Minecraft 26.3:
 
 ### `AdvancementHolder` (Record)
 - `Identifier id()`: ID advancement (misal: `minecraft:adventure/adventuring_time`).
 - `Advancement value()`: Object advancement sebenarnya.
 
 ### `Advancement` (Record)
-- `Optional<DisplayInfo> display()`: Informasi visual (title, description, icon `ItemStackTemplate`, `AdvancementType`, `isHidden`).
+- `Optional<DisplayInfo> display()`: Informasi visual (`DisplayInfo` adalah Java Record pada 26.3: `title()`, `description()`, `icon() : ItemStackTemplate`, `type() : AdvancementType`, `hidden() : boolean`).
 - `Map<String, Criterion<?>> criteria()`: Map dari criterion ID ke trigger definition.
 - `AdvancementRequirements requirements()`: Aturan pemenuhan criteria (AND/OR kelompok criteria).
   - `requirements().requirements()` bertipe `List<List<String>>`.
@@ -46,13 +46,13 @@ Struktur data internal Minecraft 26.2:
 
 ## 3. Bagaimana `Adventuring Time` Bekerja
 
-Pada Minecraft 26.2:
+Pada Minecraft 26.3:
 - Advancement ID: `minecraft:adventure/adventuring_time`.
 - Vanilla mendefinisikannya melalui `VanillaAdventureAdvancements.createAdventuringTime(...)`.
-- Daftar biome diperoleh dari generator parameter list `MultiNoiseBiomeSourceParameterList.Preset.usedBiomes()`, yang menghasilkan 55 biome Overworld pada Minecraft 26.2 (termasuk *Pale Garden*).
+- Daftar biome diperoleh dari generator parameter list `MultiNoiseBiomeSourceParameterList.Preset.usedBiomes()`, yang menghasilkan 56 biome Overworld pada Minecraft 26.3 (termasuk *Pale Garden* dan biome baru *Dappled Forest* `minecraft:dappled_forest`).
 - Setiap biome ditambahkan sebagai criterion dengan nama ID:
   ```java
-  String criterionName = biomeKey.identifier().toString(); // Contoh: "minecraft:plains"
+  String criterionName = biomeKey.identifier().toString(); // Contoh: "minecraft:plains", "minecraft:dappled_forest"
   ```
 - Trigger yang digunakan adalah `PlayerTrigger.TriggerInstance.located(LocationPredicate.Builder.inBiome(biomeHolder))`.
 - Ketika player menginjak suatu biome:
@@ -62,7 +62,7 @@ Pada Minecraft 26.2:
 - Pada client:
   - `AdvancementProgress.getCompletedCriteria()` mengembalikan semua string biome yang sudah dikunjungi.
   - `AdvancementProgress.getRemainingCriteria()` mengembalikan semua string biome yang belum dikunjungi.
-  - Total biome = `advancement.requirements().size()` (55 biome).
+  - Total biome = `advancement.requirements().size()` (56 biome).
 
 ---
 

@@ -1,6 +1,6 @@
-# Vanilla Advancements & Criterion Coverage Audit (Minecraft 26.2)
+# Vanilla Advancements & Criterion Coverage Audit (Minecraft 26.3)
 
-Dokumen ini berisi hasil audit komprehensif terhadap seluruh 126 advancement vanilla player-facing pada Minecraft 26.2.
+Dokumen ini berisi hasil audit komprehensif terhadap seluruh 126 advancement vanilla player-facing pada Minecraft 26.3.
 
 ## 1. Ringkasan Klasifikasi Coverage
 
@@ -20,7 +20,7 @@ Dokumen ini berisi hasil audit komprehensif terhadap seluruh 126 advancement van
 
 | Advancement ID | Title Key | Criteria | Req Groups | Semantic Type | Primary Trigger | Resolver | Detail Status |
 | :--- | :--- | :---: | :---: | :--- | :--- | :--- | :--- |
-| `adventure/adventuring_time` | `advancements.adventure.adventuring_time.title` | 55 | 55 | AND (All) | `location` | **Biome** | Full |
+| `adventure/adventuring_time` | `advancements.adventure.adventuring_time.title` | 56 | 56 | AND (All) | `location` | **Biome** | Full |
 | `adventure/kill_a_mob` | `advancements.adventure.kill_a_mob.title` | 41 | 1 | OR (Any 1) | `player_killed_entity` | **Entity** | Full |
 | `adventure/kill_all_mobs` | `advancements.adventure.kill_all_mobs.title` | 41 | 41 | AND (All) | `player_killed_entity` | **Entity** | Full |
 | `husbandry/balanced_diet` | `advancements.husbandry.balanced_diet.title` | 40 | 40 | AND (All) | `consume_item` | **Item** | Full |
