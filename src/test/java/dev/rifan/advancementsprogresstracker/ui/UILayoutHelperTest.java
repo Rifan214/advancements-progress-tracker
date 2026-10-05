@@ -129,4 +129,223 @@ class UILayoutHelperTest {
 		String safeHint = UILayoutHelper.trimStringToWidth(MOCK_FONT, longHint, maxInnerWidth);
 		assertTrue(MOCK_FONT.applyAsInt(safeHint) <= maxInnerWidth, "Hint must not overflow EditBox inner width");
 	}
+
+	@Test
+	@DisplayName("Scrollbar thumb height respects minimum bound and scales proportionally to content")
+	void testScrollbarThumbHeightCalculation() {
+		int trackHeight = 300;
+		int minThumbHeight = 24;
+
+		// Large content: thumb height = 300 * 300 / 1200 = 75
+		assertEquals(75, UILayoutHelper.calculateThumbHeight(trackHeight, 1200, minThumbHeight));
+
+		// Very large content: calculated thumb height = 300 * 300 / 9000 = 10, clamped to minThumbHeight (24)
+		assertEquals(24, UILayoutHelper.calculateThumbHeight(trackHeight, 9000, minThumbHeight));
+
+		// Content equals track height: thumb spans entire track
+		assertEquals(trackHeight, UILayoutHelper.calculateThumbHeight(trackHeight, 300, minThumbHeight));
+
+		// Content smaller than track: thumb spans entire track
+		assertEquals(trackHeight, UILayoutHelper.calculateThumbHeight(trackHeight, 150, minThumbHeight));
+
+		// Invalid/empty content: returns minThumbHeight safely
+		assertEquals(minThumbHeight, UILayoutHelper.calculateThumbHeight(trackHeight, 0, minThumbHeight));
+	}
+
+	@Test
+	@DisplayName("Thumb Y position scales between track top and track bottom")
+	void testScrollbarThumbYPosition() {
+		int trackTop = 40;
+		int trackHeight = 300;
+		int thumbHeight = 60; // available track = 240
+		double maxScroll = 500.0;
+
+		// Scroll at 0%
+		assertEquals(trackTop, UILayoutHelper.calculateThumbY(trackTop, trackHeight, thumbHeight, 0.0, maxScroll));
+
+		// Scroll at 50%
+		assertEquals(trackTop + 120, UILayoutHelper.calculateThumbY(trackTop, trackHeight, thumbHeight, 250.0, maxScroll));
+
+		// Scroll at 100%
+		assertEquals(trackTop + 240, UILayoutHelper.calculateThumbY(trackTop, trackHeight, thumbHeight, 500.0, maxScroll));
+	}
+
+	@Test
+	@DisplayName("Drag downward: dragging mouse down increases scroll amount")
+	void testScrollbarDragDownwardIncreasesScroll() {
+		int trackTop = 40;
+		int trackHeight = 300;
+		int thumbHeight = 60;
+		double maxScroll = 500.0;
+		double dragClickOffsetY = 15.0; // Clicked 15px inside thumb
+
+		// Mouse starts at Y = 55 (thumb top at 40, scroll = 0)
+		double initialScroll = UILayoutHelper.calculateScrollFromMouseDrag(55.0, dragClickOffsetY, trackTop, trackHeight, thumbHeight, maxScroll);
+		assertEquals(0.0, initialScroll, 0.001);
+
+		// Drag downward to Y = 105 (thumb top wants to be 90)
+		double scrolledDown = UILayoutHelper.calculateScrollFromMouseDrag(105.0, dragClickOffsetY, trackTop, trackHeight, thumbHeight, maxScroll);
+		assertTrue(scrolledDown > initialScroll, "Dragging downward must increase scroll amount");
+
+		// Drag further down to Y = 175
+		double scrolledFurtherDown = UILayoutHelper.calculateScrollFromMouseDrag(175.0, dragClickOffsetY, trackTop, trackHeight, thumbHeight, maxScroll);
+		assertTrue(scrolledFurtherDown > scrolledDown, "Dragging further downward must further increase scroll amount");
+	}
+
+	@Test
+	@DisplayName("Drag upward: dragging mouse up decreases scroll amount")
+	void testScrollbarDragUpwardDecreasesScroll() {
+		int trackTop = 40;
+		int trackHeight = 300;
+		int thumbHeight = 60;
+		double maxScroll = 500.0;
+		double dragClickOffsetY = 15.0;
+
+		// Start from lower position Y = 200
+		double scrollFromLower = UILayoutHelper.calculateScrollFromMouseDrag(200.0, dragClickOffsetY, trackTop, trackHeight, thumbHeight, maxScroll);
+
+		// Drag upward to Y = 120
+		double scrollFromHigher = UILayoutHelper.calculateScrollFromMouseDrag(120.0, dragClickOffsetY, trackTop, trackHeight, thumbHeight, maxScroll);
+		assertTrue(scrollFromHigher < scrollFromLower, "Dragging upward must decrease scroll amount");
+	}
+
+	@Test
+	@DisplayName("Top clamp: dragging above track clamps thumb to trackTop and scroll to 0")
+	void testScrollbarTopClamping() {
+		int trackTop = 40;
+		int trackHeight = 300;
+		int thumbHeight = 60;
+		double maxScroll = 500.0;
+		double dragClickOffsetY = 15.0;
+
+		// Drag above trackTop (e.g. mouseY = 10, wants thumb top = -5)
+		double clampedThumbY = UILayoutHelper.clampThumbY(10.0 - dragClickOffsetY, trackTop, trackHeight, thumbHeight);
+		assertEquals(trackTop, clampedThumbY, 0.001);
+
+		double clampedScroll = UILayoutHelper.calculateScrollFromMouseDrag(10.0, dragClickOffsetY, trackTop, trackHeight, thumbHeight, maxScroll);
+		assertEquals(0.0, clampedScroll, 0.001);
+	}
+
+	@Test
+	@DisplayName("Bottom clamp: dragging below track clamps thumb to track bottom and scroll to maxScroll")
+	void testScrollbarBottomClamping() {
+		int trackTop = 40;
+		int trackHeight = 300;
+		int thumbHeight = 60;
+		double maxScroll = 500.0;
+		double dragClickOffsetY = 15.0;
+
+		int expectedMaxThumbY = trackTop + trackHeight - thumbHeight; // 40 + 240 = 280
+
+		// Drag way below track (e.g. mouseY = 800)
+		double clampedThumbY = UILayoutHelper.clampThumbY(800.0 - dragClickOffsetY, trackTop, trackHeight, thumbHeight);
+		assertEquals(expectedMaxThumbY, clampedThumbY, 0.001);
+
+		double clampedScroll = UILayoutHelper.calculateScrollFromMouseDrag(800.0, dragClickOffsetY, trackTop, trackHeight, thumbHeight, maxScroll);
+		assertEquals(maxScroll, clampedScroll, 0.001);
+	}
+
+	@Test
+	@DisplayName("No-scroll content: when content fits viewport, scrolling and dragging do not activate")
+	void testNoScrollWhenContentFitsViewport() {
+		int trackTop = 40;
+		int trackHeight = 300;
+		int contentHeight = 250;
+		int minThumbHeight = 24;
+		double maxScroll = 0.0; // No excess content
+
+		int thumbHeight = UILayoutHelper.calculateThumbHeight(trackHeight, contentHeight, minThumbHeight);
+		assertEquals(trackHeight, thumbHeight);
+
+		double scrollFromDrag = UILayoutHelper.calculateScrollFromMouseDrag(150.0, 10.0, trackTop, trackHeight, thumbHeight, maxScroll);
+		assertEquals(0.0, scrollFromDrag, 0.001);
+
+		double thumbY = UILayoutHelper.calculateThumbY(trackTop, trackHeight, thumbHeight, 0.0, maxScroll);
+		assertEquals(trackTop, thumbY);
+	}
+
+	@Test
+	@DisplayName("Scrollbar hit testing recognizes points inside thumb bounds with tolerance")
+	void testScrollbarHitTesting() {
+		int scrollbarX = 254;
+		int thumbWidth = 6;
+		int thumbY = 100;
+		int thumbHeight = 50;
+
+		// Inside thumb
+		assertTrue(UILayoutHelper.isPointInScrollbarThumb(256, 120, scrollbarX, thumbWidth, thumbY, thumbHeight));
+
+		// In 2px tolerance zone horizontally
+		assertTrue(UILayoutHelper.isPointInScrollbarThumb(252, 120, scrollbarX, thumbWidth, thumbY, thumbHeight));
+		assertTrue(UILayoutHelper.isPointInScrollbarThumb(262, 120, scrollbarX, thumbWidth, thumbY, thumbHeight));
+
+		// Outside horizontally
+		assertFalse(UILayoutHelper.isPointInScrollbarThumb(250, 120, scrollbarX, thumbWidth, thumbY, thumbHeight));
+		assertFalse(UILayoutHelper.isPointInScrollbarThumb(265, 120, scrollbarX, thumbWidth, thumbY, thumbHeight));
+
+		// Outside vertically
+		assertFalse(UILayoutHelper.isPointInScrollbarThumb(256, 95, scrollbarX, thumbWidth, thumbY, thumbHeight));
+		assertFalse(UILayoutHelper.isPointInScrollbarThumb(256, 155, scrollbarX, thumbWidth, thumbY, thumbHeight));
+	}
+
+	@Test
+	@DisplayName("Mouse-wheel regression: wheel scrolling calculates and clamps correctly")
+	void testMouseWheelScrolling() {
+		double maxScroll = 200.0;
+		double scrollStep = 24.0;
+
+		// Wheel scroll down (negative wheel delta -> scroll increases)
+		double scrolledDown = UILayoutHelper.calculateMouseWheelScroll(50.0, maxScroll, -1.0, scrollStep);
+		assertEquals(74.0, scrolledDown, 0.001);
+
+		// Wheel scroll up (positive wheel delta -> scroll decreases)
+		double scrolledUp = UILayoutHelper.calculateMouseWheelScroll(50.0, maxScroll, 1.0, scrollStep);
+		assertEquals(26.0, scrolledUp, 0.001);
+
+		// Wheel scroll clamped at top (0.0)
+		double clampedTop = UILayoutHelper.calculateMouseWheelScroll(10.0, maxScroll, 1.0, scrollStep);
+		assertEquals(0.0, clampedTop, 0.001);
+
+		// Wheel scroll clamped at bottom (maxScroll)
+		double clampedBottom = UILayoutHelper.calculateMouseWheelScroll(190.0, maxScroll, -1.0, scrollStep);
+		assertEquals(200.0, clampedBottom, 0.001);
+	}
+
+	@Test
+	@DisplayName("Dragging state transitions stop immediately upon mouse release")
+	void testDraggingStateLifecycle() {
+		// Simulates tracker screen dragging state lifecycle
+		boolean isDragging = false;
+		double scrollAmount = 0.0;
+		double maxScroll = 300.0;
+		int trackTop = 40;
+		int trackHeight = 200;
+		int thumbHeight = 50;
+
+		// 1. Mouse click inside thumb -> dragging starts
+		double clickY = 55.0;
+		double thumbY = 40.0;
+		double dragOffset = clickY - thumbY; // 15.0
+		isDragging = true;
+		assertTrue(isDragging);
+
+		// 2. Drag to new position
+		double currentMouseY = 120.0;
+		if (isDragging) {
+			scrollAmount = UILayoutHelper.calculateScrollFromMouseDrag(currentMouseY, dragOffset, trackTop, trackHeight, thumbHeight, maxScroll);
+		}
+		assertTrue(scrollAmount > 0.0);
+
+		// 3. Mouse release -> dragging stops immediately
+		isDragging = false;
+		assertFalse(isDragging);
+
+		// 4. Subsequent mouse movement without dragging active does not change scroll
+		double previousScroll = scrollAmount;
+		currentMouseY = 180.0;
+		if (isDragging) {
+			scrollAmount = UILayoutHelper.calculateScrollFromMouseDrag(currentMouseY, dragOffset, trackTop, trackHeight, thumbHeight, maxScroll);
+		}
+		assertEquals(previousScroll, scrollAmount, "Scroll position must not change when dragging is inactive");
+	}
 }

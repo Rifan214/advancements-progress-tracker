@@ -64,4 +64,57 @@ public final class UILayoutHelper {
 		}
 		return sb.toString() + dots;
 	}
+
+	public static int calculateThumbHeight(int trackHeight, int contentHeight, int minThumbHeight) {
+		if (contentHeight <= 0 || trackHeight <= 0) {
+			return minThumbHeight;
+		}
+		if (contentHeight <= trackHeight) {
+			return trackHeight;
+		}
+		return Math.max(minThumbHeight, Math.min(trackHeight, (int) ((double) trackHeight * trackHeight / (double) contentHeight)));
+	}
+
+	public static int calculateThumbY(int trackTop, int trackHeight, int thumbHeight, double scrollAmount, double maxScroll) {
+		int availableTrack = trackHeight - thumbHeight;
+		if (availableTrack <= 0 || maxScroll <= 0) {
+			return trackTop;
+		}
+		double clampedScroll = Math.max(0.0, Math.min(maxScroll, scrollAmount));
+		return trackTop + (int) (availableTrack * (clampedScroll / maxScroll));
+	}
+
+	public static boolean isPointInScrollbarThumb(double mouseX, double mouseY, int scrollbarX, int thumbWidth, int thumbY, int thumbHeight) {
+		return mouseX >= scrollbarX - 2 && mouseX <= scrollbarX + thumbWidth + 2 && mouseY >= thumbY && mouseY <= thumbY + thumbHeight;
+	}
+
+	public static double clampThumbY(double thumbY, int trackTop, int trackHeight, int thumbHeight) {
+		int availableTrack = Math.max(0, trackHeight - thumbHeight);
+		return Math.max(trackTop, Math.min(trackTop + availableTrack, thumbY));
+	}
+
+	public static double calculateScrollFromThumbY(double thumbY, int trackTop, int trackHeight, int thumbHeight, double maxScroll) {
+		if (maxScroll <= 0) {
+			return 0.0;
+		}
+		int availableTrack = trackHeight - thumbHeight;
+		if (availableTrack <= 0) {
+			return 0.0;
+		}
+		double clampedY = clampThumbY(thumbY, trackTop, trackHeight, thumbHeight);
+		double normalized = (clampedY - trackTop) / (double) availableTrack;
+		return Math.max(0.0, Math.min(maxScroll, normalized * maxScroll));
+	}
+
+	public static double calculateScrollFromMouseDrag(double mouseY, double dragClickOffsetY, int trackTop, int trackHeight, int thumbHeight, double maxScroll) {
+		double thumbY = mouseY - dragClickOffsetY;
+		return calculateScrollFromThumbY(thumbY, trackTop, trackHeight, thumbHeight, maxScroll);
+	}
+
+	public static double calculateMouseWheelScroll(double currentScroll, double maxScroll, double verticalWheelAmount, double scrollStep) {
+		if (maxScroll <= 0) {
+			return 0.0;
+		}
+		return Math.max(0.0, Math.min(maxScroll, currentScroll - verticalWheelAmount * scrollStep));
+	}
 }

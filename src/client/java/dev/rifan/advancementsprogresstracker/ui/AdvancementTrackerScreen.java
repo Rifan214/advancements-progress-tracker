@@ -4,6 +4,7 @@ import dev.rifan.advancementsprogresstracker.cache.AdvancementProgressCache;
 import dev.rifan.advancementsprogresstracker.data.AdvancementProgressInfo;
 import dev.rifan.advancementsprogresstracker.data.CriterionDetail;
 import dev.rifan.advancementsprogresstracker.data.ProgressStatus;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.advancements.AdvancementType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -252,20 +253,27 @@ public class AdvancementTrackerScreen extends Screen {
 
 	@Override
 	public void onClose() {
+		this.isDraggingLeftScroll = false;
+		this.isDraggingRightScroll = false;
+		this.setDragging(false);
 		if (this.minecraft != null) {
 			this.minecraft.setScreenAndShow(this.parentScreen);
 		}
+	}
+
+	private static boolean isLeftMouseButton(MouseButtonEvent event) {
+		return event.button() == InputConstants.MOUSE_BUTTON_LEFT || event.button() == 0;
 	}
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
 		if (mouseX < leftPanelWidth) {
 			// Scroll left panel
-			this.leftScroll = Math.max(0, Math.min(maxLeftScroll, this.leftScroll - verticalAmount * 24));
+			this.leftScroll = UILayoutHelper.calculateMouseWheelScroll(this.leftScroll, this.maxLeftScroll, verticalAmount, 24);
 			return true;
 		} else {
 			// Scroll right panel
-			this.rightScroll = Math.max(0, Math.min(maxRightScroll, this.rightScroll - verticalAmount * 24));
+			this.rightScroll = UILayoutHelper.calculateMouseWheelScroll(this.rightScroll, this.maxRightScroll, verticalAmount, 24);
 			return true;
 		}
 	}
@@ -275,34 +283,36 @@ public class AdvancementTrackerScreen extends Screen {
 		double mouseX = event.x();
 		double mouseY = event.y();
 
-		if (event.button() == 0) { // Left-click
+		if (isLeftMouseButton(event)) {
 			int visibleHeight = this.height - headerHeight - footerHeight;
 
 			// Check left scrollbar thumb
 			if (maxLeftScroll > 0) {
 				int totalLeftContent = filteredAdvancements.size() * 36;
-				int thumbHeight = Math.max(24, Math.min(visibleHeight, (int) ((double) visibleHeight * visibleHeight / (double) Math.max(1, totalLeftContent))));
-				int availableTrackDistance = visibleHeight - thumbHeight;
-				int thumbY = headerHeight + (availableTrackDistance > 0 ? (int) (availableTrackDistance * (leftScroll / maxLeftScroll)) : 0);
+				int thumbHeight = UILayoutHelper.calculateThumbHeight(visibleHeight, totalLeftContent, 24);
+				int thumbY = UILayoutHelper.calculateThumbY(headerHeight, visibleHeight, thumbHeight, leftScroll, maxLeftScroll);
 				int scrollbarX = leftPanelWidth - 6;
+				int barWidth = 6;
 
-				if (mouseX >= scrollbarX - 2 && mouseX <= scrollbarX + 8 && mouseY >= thumbY && mouseY <= thumbY + thumbHeight) {
+				if (UILayoutHelper.isPointInScrollbarThumb(mouseX, mouseY, scrollbarX, barWidth, thumbY, thumbHeight)) {
 					this.isDraggingLeftScroll = true;
 					this.leftDragClickOffsetY = mouseY - thumbY;
+					this.setDragging(true);
 					return true;
 				}
 			}
 
 			// Check right scrollbar thumb
 			if (maxRightScroll > 0) {
-				int thumbHeight = Math.max(24, Math.min(visibleHeight, (int) ((double) visibleHeight * visibleHeight / (double) Math.max(1, lastRightContentHeight))));
-				int availableTrackDistance = visibleHeight - thumbHeight;
-				int thumbY = headerHeight + (availableTrackDistance > 0 ? (int) (availableTrackDistance * (rightScroll / maxRightScroll)) : 0);
+				int thumbHeight = UILayoutHelper.calculateThumbHeight(visibleHeight, lastRightContentHeight, 24);
+				int thumbY = UILayoutHelper.calculateThumbY(headerHeight, visibleHeight, thumbHeight, rightScroll, maxRightScroll);
 				int scrollbarX = this.width - 8;
+				int barWidth = 6;
 
-				if (mouseX >= scrollbarX - 2 && mouseX <= scrollbarX + 8 && mouseY >= thumbY && mouseY <= thumbY + thumbHeight) {
+				if (UILayoutHelper.isPointInScrollbarThumb(mouseX, mouseY, scrollbarX, barWidth, thumbY, thumbHeight)) {
 					this.isDraggingRightScroll = true;
 					this.rightDragClickOffsetY = mouseY - thumbY;
+					this.setDragging(true);
 					return true;
 				}
 			}
@@ -330,26 +340,14 @@ public class AdvancementTrackerScreen extends Screen {
 
 		if (this.isDraggingLeftScroll && maxLeftScroll > 0) {
 			int totalLeftContent = filteredAdvancements.size() * 36;
-			int thumbHeight = Math.max(24, Math.min(visibleHeight, (int) ((double) visibleHeight * visibleHeight / (double) Math.max(1, totalLeftContent))));
-			int availableTrackDistance = visibleHeight - thumbHeight;
-			if (availableTrackDistance > 0) {
-				double newThumbY = event.y() - leftDragClickOffsetY;
-				double offsetInTrack = newThumbY - headerHeight;
-				double newScroll = (offsetInTrack / (double) availableTrackDistance) * maxLeftScroll;
-				this.leftScroll = Math.max(0, Math.min(maxLeftScroll, newScroll));
-			}
+			int thumbHeight = UILayoutHelper.calculateThumbHeight(visibleHeight, totalLeftContent, 24);
+			this.leftScroll = UILayoutHelper.calculateScrollFromMouseDrag(event.y(), leftDragClickOffsetY, headerHeight, visibleHeight, thumbHeight, maxLeftScroll);
 			return true;
 		}
 
 		if (this.isDraggingRightScroll && maxRightScroll > 0) {
-			int thumbHeight = Math.max(24, Math.min(visibleHeight, (int) ((double) visibleHeight * visibleHeight / (double) Math.max(1, lastRightContentHeight))));
-			int availableTrackDistance = visibleHeight - thumbHeight;
-			if (availableTrackDistance > 0) {
-				double newThumbY = event.y() - rightDragClickOffsetY;
-				double offsetInTrack = newThumbY - headerHeight;
-				double newScroll = (offsetInTrack / (double) availableTrackDistance) * maxRightScroll;
-				this.rightScroll = Math.max(0, Math.min(maxRightScroll, newScroll));
-			}
+			int thumbHeight = UILayoutHelper.calculateThumbHeight(visibleHeight, lastRightContentHeight, 24);
+			this.rightScroll = UILayoutHelper.calculateScrollFromMouseDrag(event.y(), rightDragClickOffsetY, headerHeight, visibleHeight, thumbHeight, maxRightScroll);
 			return true;
 		}
 
@@ -358,9 +356,10 @@ public class AdvancementTrackerScreen extends Screen {
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
-		if (event.button() == 0) {
+		if (isLeftMouseButton(event)) {
 			this.isDraggingLeftScroll = false;
 			this.isDraggingRightScroll = false;
+			this.setDragging(false);
 		}
 		return super.mouseReleased(event);
 	}
@@ -748,11 +747,10 @@ public class AdvancementTrackerScreen extends Screen {
 		int barWidth = 6;
 		graphics.fill(x, top, x + barWidth, top + height, 0x33000000);
 
-		int thumbHeight = Math.max(24, Math.min(height, (int) ((double) height * height / (double) Math.max(1, contentHeight))));
-		int availableTrack = height - thumbHeight;
-		int thumbY = top + (availableTrack > 0 && maxScroll > 0 ? (int) (availableTrack * (scroll / maxScroll)) : 0);
+		int thumbHeight = UILayoutHelper.calculateThumbHeight(height, contentHeight, 24);
+		int thumbY = UILayoutHelper.calculateThumbY(top, height, thumbHeight, scroll, maxScroll);
 
-		boolean isHovered = mouseX >= x - 2 && mouseX <= x + barWidth + 2 && mouseY >= thumbY && mouseY <= thumbY + thumbHeight;
+		boolean isHovered = UILayoutHelper.isPointInScrollbarThumb(mouseX, mouseY, x, barWidth, thumbY, thumbHeight);
 		int thumbColor = isDragging ? 0xFFFFFFFF : (isHovered ? 0xCCFFFFFF : 0x77FFFFFF);
 
 		graphics.fill(x, thumbY, x + barWidth, thumbY + thumbHeight, thumbColor);
